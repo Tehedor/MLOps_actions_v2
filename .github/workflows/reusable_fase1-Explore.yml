@@ -33,7 +33,7 @@ jobs:
         run: |
           mv /opt/.venv .
           . .venv/bin/activate
-          pip list
+          python -m pip list
 
       - name: Configurar Git y DVC
         run: |
