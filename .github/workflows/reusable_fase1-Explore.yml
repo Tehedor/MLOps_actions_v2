@@ -1,0 +1,76 @@
+name: "1️⃣♻️ Reusable: Fase 1 (Explore)"
+
+on:
+  workflow_call:
+    inputs:
+      variant_id:
+        required: true
+        type: string
+      params_json:
+        required: true
+        type: string
+
+jobs:
+  ejecutar-fase-1:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/tehedor/mlops_actions/mlops-env:latest
+    env:
+      USE_VENV: 0
+      DAGSHUB_USER: ${{ secrets.DAGSHUB_USER }}
+      DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
+    steps:
+      - name: Checkout del codigo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Configurar Git y DVC
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global --add safe.directory '*'
+          dvc remote modify storage --local auth basic
+          dvc remote modify storage --local user "$DAGSHUB_USER"
+          dvc remote modify storage --local password "$DAGSHUB_TOKEN"
+
+      - name: DVC Pull (Datos Raw)
+        run: dvc pull data/raw.csv.dvc
+
+      - name: Ejecutar Fase 1 (Variante, Script, Check)
+        run: |
+          python - <<'PY'
+          import json
+          import subprocess
+
+          raw = '''${{ inputs.params_json }}'''.strip()
+          params = json.loads(raw) if raw else {}
+
+          extra_args = []
+          for key, value in params.items():
+            k = str(key).strip()
+            if not k:
+              continue
+            extra_args.append(f"{k}={value}")
+
+          print("Ejecutando con:", " ".join(extra_args))
+
+          subprocess.run(
+            [
+              "make",
+              "variant1",
+              "VARIANT=${{ inputs.variant_id }}",
+              *extra_args,
+            ],
+            check=True,
+          )
+          subprocess.run(["make", "script1-run", "VARIANT=${{ inputs.variant_id }}"], check=True)
+          subprocess.run(["make", "script1-check-results", "VARIANT=${{ inputs.variant_id }}"], check=True)
+          PY
+
+      - name: Publicar Variante
+        run: make publish1 VARIANT=${{ inputs.variant_id }}
+
+      - name: Empujar resultados de F1 a Git
+        run: git push origin HEAD:main
