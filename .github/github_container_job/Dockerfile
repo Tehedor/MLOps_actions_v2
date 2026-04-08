@@ -1,5 +1,5 @@
 # GitHub Container Registry (GHCR)
-# Imagen ligera de Python 3.11 para MLOps 1
+# Imagen ligera de Python 3.11 para MLOps
 FROM python:3.11-slim
 
 # Configuración de Python para mejor rendimiento
@@ -27,8 +27,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt /tmp/
 
 # Instala dependencias Python + limpia cachés y archivos innecesarios
-RUN $/opt/.venv/bin/pip install --upgrade pip setuptools wheel && \
-    $/opt/.venv/bin/pip install -r /tmp/requirements.txt && \
+RUN /opt/.venv/bin/pip install --upgrade pip setuptools wheel && \
+    /opt/.venv/bin/pip install -r /tmp/requirements.txt && \
     find /opt/.venv -type f -name "*.pyc" -delete && \
     find /opt/.venv -type d -name "__pycache__" -delete && \
     find /opt/.venv -type d -name "tests" -delete && \
