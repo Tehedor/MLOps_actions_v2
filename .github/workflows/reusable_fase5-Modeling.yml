@@ -33,6 +33,7 @@ jobs:
 
       - name: Configurar Git, sincronizar Fase 4 y configurar DVC
         run: |
+          source opt/.venv/bin/activate
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global --add safe.directory '*'
@@ -108,5 +109,5 @@ jobs:
         run: |
           make register5 VARIANT=${{ inputs.variant_id }}
 
-      - name: Empujar resultados de F5 a Git
-        run: git push origin HEAD:main
+      # - name: Empujar resultados de F5 a Git
+      #   run: git push origin HEAD:main
