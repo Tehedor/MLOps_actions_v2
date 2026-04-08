@@ -17,7 +17,7 @@ jobs:
   ejecutar-fase-2:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/tehedor/mlops_actions/mlops-env:latest
+      image: ${{ vars.IMAGE_MLOPS || format('ghcr.io/{0}/mlops-env:latest', github.repository) }}
     env:
       USE_VENV: 0
       DAGSHUB_USER: ${{ secrets.DAGSHUB_USER }}
