@@ -1,0 +1,1 @@
+![alt text](images/permisos_token_trigger_actions.png)

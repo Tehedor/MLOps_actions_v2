@@ -17,7 +17,7 @@ jobs:
   ejecutar-fase-7:
     runs-on: [self-hosted, Linux, X64, self-hosted-tehelab]
     container:
-      image: ${{ vars.IMAGE_MLOPS || format('ghcr.io/{0}/mlops-env:latest', github.repository) }}
+      image: ${{ vars.IMAGE_MLOPS || 'ghcr.io/tehedor/mlops_actions_v2/mlops-env:latest' }}
     env:
       USE_VENV: 0
       DAGSHUB_USER: ${{ secrets.DAGSHUB_USER }}
