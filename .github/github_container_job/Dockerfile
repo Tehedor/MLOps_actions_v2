@@ -1,5 +1,5 @@
 # GitHub Container Registry (GHCR)
-# Imagen ligera de Python 3.11 para MLOps
+# Imagen ligera de Python 3.11 para MLOps 1
 FROM python:3.11-slim
 
 # Configuración de Python para mejor rendimiento
