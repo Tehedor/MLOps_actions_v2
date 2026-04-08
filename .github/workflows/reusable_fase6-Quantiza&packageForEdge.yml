@@ -1,4 +1,4 @@
-name: "5️⃣♻️ Reusable: Fase 5 (Modeling)"
+name: "6️⃣♻️ Reusable: Fase 6 (Quantize & Package for Edge)"
 
 on:
   workflow_call:
@@ -14,7 +14,7 @@ on:
         type: string
 
 jobs:
-  ejecutar-fase-5:
+  ejecutar-fase-6:
     runs-on: ubuntu-latest
     container:
       image: ${{ vars.IMAGE_MLOPS || format('ghcr.io/{0}/mlops-env:latest', github.repository) }}
@@ -22,8 +22,6 @@ jobs:
       USE_VENV: 0
       DAGSHUB_USER: ${{ secrets.DAGSHUB_USER }}
       DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
-      MLFLOW_TRACKING_USERNAME: ${{ secrets.MLFLOW_TRACKING_USERNAME }}
-      MLFLOW_TRACKING_PASSWORD: ${{ secrets.MLFLOW_TRACKING_PASSWORD }}
     steps:
       - name: Checkout del codigo
         uses: actions/checkout@v4
@@ -31,7 +29,7 @@ jobs:
           fetch-depth: 0
           ref: main
 
-      - name: Configurar Git, sincronizar Fase 4 y configurar DVC
+      - name: Configurar Git, sincronizar Fase 5 y configurar DVC
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
@@ -41,10 +39,10 @@ jobs:
           dvc remote modify storage --local user "$DAGSHUB_USER"
           dvc remote modify storage --local password "$DAGSHUB_TOKEN"
 
-      - name: DVC Pull (Traer datos de Fase 4)
-        run: dvc pull executions/04_targetengineering/${{ inputs.parent_variant }}/*.dvc
+      - name: DVC Pull (Traer datos de Fase 5)
+        run: dvc pull executions/05_modeling/${{ inputs.parent_variant }}/*.dvc
 
-      - name: Ejecutar Fase 5 (Variante)
+      - name: Crear variante Fase 6
         run: |
           python - <<'PY'
           import json
@@ -85,7 +83,7 @@ jobs:
           subprocess.run(
               [
                   "make",
-                  "variant5",
+                  "variant6",
                   "VARIANT=${{ inputs.variant_id }}",
                   "PARENT=${{ inputs.parent_variant }}",
                   *extra_args,
@@ -94,19 +92,19 @@ jobs:
           )
           PY
 
-      - name: Ejecutar script de Fase 5
+      - name: Ejecutar script de Fase 6
         env:
           PYTHONFAULTHANDLER: 1
         run: |
-          make script5 VARIANT=${{ inputs.variant_id }}
+          make script6 VARIANT=${{ inputs.variant_id }}
 
       - name: Verificar resultados
         run: |
-          make check5 VARIANT=${{ inputs.variant_id }}
+          make check6 VARIANT=${{ inputs.variant_id }}
 
-      - name: Registrar resultados de F5
+      - name: Registrar resultados de F6
         run: |
-          make register5 VARIANT=${{ inputs.variant_id }}
+          make register6 VARIANT=${{ inputs.variant_id }}
 
-      - name: Empujar resultados de F5 a Git
+      - name: Empujar resultados de F6 a Git
         run: git push origin HEAD:main

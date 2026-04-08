@@ -47,16 +47,35 @@ jobs:
           python - <<'PY'
           import json
           import subprocess
+          import sys
 
           raw = '''${{ inputs.params_json }}'''.strip()
           params = json.loads(raw) if raw else {}
+
+          # Soporta casos donde params_json llegue serializado dos veces.
+          if isinstance(params, str):
+            try:
+              params = json.loads(params)
+            except Exception:
+              pass
+
+          if not isinstance(params, dict):
+            print("[ERROR] 'params_json' debe representar un objeto JSON (dict)")
+            sys.exit(1)
+
+          def to_make_value(value):
+            if isinstance(value, bool):
+              return "true" if value else "false"
+            if isinstance(value, (list, dict)):
+              return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+            return str(value)
 
           extra_args = []
           for key, value in params.items():
             k = str(key).strip()
             if not k:
               continue
-            extra_args.append(f"{k}={value}")
+            extra_args.append(f"{k}={to_make_value(value)}")
 
           print("Ejecutando con:", " ".join(extra_args))
 
@@ -70,27 +89,16 @@ jobs:
             ],
             check=True,
           )
+          PY
 
-      - name: Ejecutar script de Fase 3 (Con monitor de RAM)
-        env:
-          PYTHONFAULTHANDLER: 1
-        run: |
-          (while true; do echo "[$(date '+%H:%M:%S')] RAM Libre:"; free -m | grep Mem; sleep 10; done) &
-          MONITOR_PID=$!
-          make script3-run VARIANT=${{ inputs.variant_id }}
-          kill $MONITOR_PID
+      - name: Ejecutar script de Fase 3
+        run: make script3 VARIANT=${{ inputs.variant_id }}
 
-      - name: Diagnostico de error (Solo si falla)
-        if: failure()
-        run: |
-          echo "==== BUSCANDO ERRORES DE OUT OF MEMORY (OOM) ===="
-          dmesg -T | grep -i -E "killed|oom|out of memory" || echo "No hay logs de OOM en dmesg."
-          free -m
+      - name: Verificar resultados de Fase 3
+        run: make check3 VARIANT=${{ inputs.variant_id }}
 
-      - name: Verificar y Publicar resultados
-        run: |
-          make script3-check-results VARIANT=${{ inputs.variant_id }}
-          make publish3 VARIANT=${{ inputs.variant_id }}
+      - name: Registrar resultados de Fase 3
+        run: make register3 VARIANT=${{ inputs.variant_id }}
 
-      - name: Empujar resultados de F3 a Git
-        run: git push origin HEAD:main
+      # - name: Empujar resultados de F3 a Git
+      #   run: git push origin HEAD:main

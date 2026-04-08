@@ -42,21 +42,41 @@ jobs:
       - name: DVC Pull (Traer datos de Fase 1)
         run: dvc pull executions/01_explore/${{ inputs.parent_variant }}/*.dvc
 
-      - name: Ejecutar Fase 2 (Variante, Script, Check)
+      - name: Ejecutar Fase 2 (Variante, Script, Check, Register)
         run: |
           python - <<'PY'
           import json
           import subprocess
+          import sys
 
           raw = '''${{ inputs.params_json }}'''.strip()
           params = json.loads(raw) if raw else {}
+
+          # Soporta casos donde params_json llegue serializado dos veces.
+          if isinstance(params, str):
+            try:
+              params = json.loads(params)
+            except Exception:
+              pass
+
+          if not isinstance(params, dict):
+            print("[ERROR] 'params_json' debe representar un objeto JSON (dict)")
+            sys.exit(1)
+
+          def to_make_value(value):
+            if isinstance(value, bool):
+              return "true" if value else "false"
+            if isinstance(value, (list, dict)):
+              # Compacto y estable para que make reciba un único argumento.
+              return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+            return str(value)
 
           extra_args = []
           for key, value in params.items():
             k = str(key).strip()
             if not k:
               continue
-            extra_args.append(f"{k}={value}")
+            extra_args.append(f"{k}={to_make_value(value)}")
 
           print("Ejecutando con:", " ".join(extra_args))
 
@@ -70,12 +90,19 @@ jobs:
             ],
             check=True,
           )
-          subprocess.run(["make", "script2-run", "VARIANT=${{ inputs.variant_id }}"], check=True)
-          subprocess.run(["make", "script2-check-results", "VARIANT=${{ inputs.variant_id }}"], check=True)
+          subprocess.run(["make", "script2", "VARIANT=${{ inputs.variant_id }}"], check=True)
+          # subprocess.run(["make", "check2", "VARIANT=${{ inputs.variant_id }}"], check=True)
+          # subprocess.run(["make", "register2", "VARIANT=${{ inputs.variant_id }}"], check=True)
           PY
+      
+      - name: Run Script2 
+        run: make script2 VARIANT=${{ inputs.variant_id }}
 
-      - name: Publicar Variante
-        run: make publish2 VARIANT=${{ inputs.variant_id }}
+      - name: Run Check2
+        run: make check2 VARIANT=${{ inputs.variant_id }}
 
-      - name: Empujar resultados de F2 a Git
-        run: git push origin HEAD:main
+      - name: Run Register2
+        run: make register2 VARIANT=${{ inputs.variant_id }}
+
+      # - name: Empujar resultados de F2 a Git
+      #   run: git push origin HEAD:main
