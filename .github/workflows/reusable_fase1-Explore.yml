@@ -39,11 +39,7 @@ jobs:
 
       - name: ls
         run: |
-          ls -la
-      - name: tree
-        run: |
-          tree -L 3
-        
+          ls -la        
 
       - name: Configurar Git y DVC
         run: |
