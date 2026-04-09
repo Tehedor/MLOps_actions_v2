@@ -37,18 +37,17 @@ jobs:
 
       - name: Configurar Git, sincronizar Fase 3 y configurar DVC
         run: |
-          . /opt/.venv/bin/activate
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global --add safe.directory '*'
-          git pull origin main --rebase
+          # git pull origin main --rebase
           dvc remote modify storage --local auth basic
           dvc remote modify storage --local user "$DAGSHUB_USER"
           dvc remote modify storage --local password "$DAGSHUB_TOKEN"
 
       - name: DVC Pull (Datos para Fase 4)
         run: |
-          dvc pull executions/02_prepareeventsds/${{ inputs.catalog_variant }}/*.dvc executions/03_preparewindowsds/${{ inputs.parent_variant }}/*.dvc
+          dvc pull executions/f02_events/${{ inputs.catalog_variant }}/*.dvc executions/f03_windows/${{ inputs.parent_variant }}/*.dvc
 
       - name: Crear variante Fase 4
         run: |

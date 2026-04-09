@@ -29,18 +29,6 @@ jobs:
           fetch-depth: 0
           ref: main
       
-      - name: Comprobar entorno 2
-        run: |
-          pip list
-
-      - name: pwd
-        run: |
-          pwd
-
-      - name: ls
-        run: |
-          ls -la        
-
       - name: Configurar Git y DVC
         run: |
           git config --global user.name "github-actions[bot]"

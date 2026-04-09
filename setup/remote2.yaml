@@ -5,7 +5,7 @@ git:
   # URL del repositorio remoto donde publicar (SSH o HTTPS)
   mode: custom
   remote_url: "https://github.com/Tehedor/MLOps_actions_v2.git"  # o https://github.com/grupoXX/...
-  publish_remote_name: "publish"
+  publish_remote_name: "origin"
   branch: test
 
 dvc:

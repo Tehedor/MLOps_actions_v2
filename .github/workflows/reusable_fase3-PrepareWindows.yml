@@ -15,7 +15,8 @@ on:
 
 jobs:
   ejecutar-fase-3:
-    runs-on: [self-hosted, Linux, X64, self-hosted-tehelab]
+    # runs-on: [self-hosted, Linux, X64, self-hosted-tehelab]
+    runs-on: ubuntu-latest
     container:
       image: ${{ vars.IMAGE_MLOPS || 'ghcr.io/tehedor/mlops_actions_v2/mlops-env:latest' }}
     env:
@@ -34,17 +35,16 @@ jobs:
 
       - name: Configurar Git, sincronizar Fase 2 y configurar DVC
         run: |
-          . /opt/.venv/bin/activate
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global --add safe.directory '*'
-          git pull origin main --rebase
+          # git pull origin main --rebase
           dvc remote modify storage --local auth basic
           dvc remote modify storage --local user "$DAGSHUB_USER"
           dvc remote modify storage --local password "$DAGSHUB_TOKEN"
 
       - name: DVC Pull (Traer datos de Fase 2)
-        run: dvc pull executions/02_prepareeventsds/${{ inputs.parent_variant }}/*.dvc
+        run: dvc pull executions/f02_events/${{ inputs.parent_variant }}/*.dvc
 
       - name: Crear variante Fase 3
         run: |
