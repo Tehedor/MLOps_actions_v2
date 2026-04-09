@@ -29,13 +29,21 @@ jobs:
           fetch-depth: 0
           ref: main
       
-      - name: Comprobar entorno
-        run: |
-          python -m pip list
-
       - name: Comprobar entorno 2
         run: |
           pip list
+
+      - name: pwd
+        run: |
+          pwd
+
+      - name: ls
+        run: |
+          ls -la
+      - name: tree
+        run: |
+          tree -L 3
+        
 
       - name: Configurar Git y DVC
         run: |
