@@ -26,10 +26,12 @@ COPY requirements.txt /tmp/
 # Instala dependencias. 
 # Como ya está en el PATH, podemos usar 'pip' directamente en lugar de '/opt/.venv/bin/pip'
 RUN pip install --upgrade pip setuptools wheel && \
-    pip install -r /tmp/requirements.txt && \
-    find $VIRTUAL_ENV -type f -name "*.pyc" -delete && \
-    find $VIRTUAL_ENV -type d -name "__pycache__" -delete && \
-    find $VIRTUAL_ENV -type d -name "tests" -delete && \
+    pip install -r /tmp/requirements.txt 
+    
+# Instala dependencias y limpia cachés de forma segura
+RUN find $VIRTUAL_ENV -type f -name "*.pyc" -delete && \
+    find $VIRTUAL_ENV -type d -name "__pycache__" -exec rm -rf {} + && \
+    find $VIRTUAL_ENV -type d -name "tests" -exec rm -rf {} + && \
     rm -rf /tmp/requirements.txt /root/.cache/pip
 
 WORKDIR /workspace
