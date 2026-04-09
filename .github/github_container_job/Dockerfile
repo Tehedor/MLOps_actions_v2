@@ -8,44 +8,30 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# Ruta al virtual environment (pre-construido en la imagen, FUERA de /workspace)
-# ENV MLOPS_VENV_PATH="/opt/.venv"
-# ENV VIRTUAL_ENV=/opt/venv
-# ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+# 1️⃣ LA CLAVE ESTÁ AQUÍ: Añadimos el venv al PATH del sistema
+ENV VIRTUAL_ENV=/opt/.venv
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
-# Instala herramientas del sistema + crea venv + instala deps (todo en una capa para optimizar)
+# Instala herramientas del sistema + crea venv (el venv se crea en la ruta de arriba)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     make \
     procps \
     util-linux \
     && rm -rf /var/lib/apt/lists/* \
-    && python3.11 -m venv /opt/.venv
-    # && python3.11 -m venv $MLOPS_VENV_PATH
+    && python3.11 -m venv $VIRTUAL_ENV
 
-# Copia requirements antes de instalar (para mejor caché en rebuilds)
 COPY requirements.txt /tmp/
 
-# Instala dependencias Python + limpia cachés y archivos innecesarios
-RUN /opt/.venv/bin/pip install --upgrade pip setuptools wheel && \
-    /opt/.venv/bin/pip install -r /tmp/requirements.txt && \
-    find /opt/.venv -type f -name "*.pyc" -delete && \
-    find /opt/.venv -type d -name "__pycache__" -delete && \
-    find /opt/.venv -type d -name "tests" -delete && \
-    find /opt/.venv -type d -name "*.dist-info" -exec rm -rf {} + 2>/dev/null ; \
+# Instala dependencias. 
+# Como ya está en el PATH, podemos usar 'pip' directamente en lugar de '/opt/.venv/bin/pip'
+RUN pip install --upgrade pip setuptools wheel && \
+    pip install -r /tmp/requirements.txt && \
+    find $VIRTUAL_ENV -type f -name "*.pyc" -delete && \
+    find $VIRTUAL_ENV -type d -name "__pycache__" -delete && \
+    find $VIRTUAL_ENV -type d -name "tests" -delete && \
     rm -rf /tmp/requirements.txt /root/.cache/pip
-# RUN $MLOPS_VENV_PATH/bin/pip install --upgrade pip setuptools wheel && \
-#     $MLOPS_VENV_PATH/bin/pip install -r /tmp/requirements.txt && \
-#     find $MLOPS_VENV_PATH -type f -name "*.pyc" -delete && \
-#     find $MLOPS_VENV_PATH -type d -name "__pycache__" -delete && \
-#     find $MLOPS_VENV_PATH -type d -name "tests" -delete && \
-#     find $MLOPS_VENV_PATH -type d -name "*.dist-info" -exec rm -rf {} + 2>/dev/null ; \
-#     rm -rf /tmp/requirements.txt /root/.cache/pip
 
 WORKDIR /workspace
 
-# El comando por defecto al arrancar el contenedor será bash
 CMD ["/bin/bash"]
-
-# docker build -f .mlops_tools/github_container_job/Dockerfile -t test-env .
-# docker run -it --rm test-env /bin/bash

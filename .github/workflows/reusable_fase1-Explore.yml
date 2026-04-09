@@ -29,11 +29,13 @@ jobs:
           fetch-depth: 0
           ref: main
       
-      - name: Move
+      - name: Comprobar entorno
         run: |
-          mv /opt/.venv .
-          . .venv/bin/activate
           python -m pip list
+
+      - name: Comprobar entorno 2
+        run: |
+          pip list
 
       - name: Configurar Git y DVC
         run: |
