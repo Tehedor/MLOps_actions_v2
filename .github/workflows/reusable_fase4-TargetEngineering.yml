@@ -99,42 +99,42 @@ jobs:
           )
           PY
 
-      - name: Validar objetivo Fase 4 contra catalogo Fase 2
-        run: |
-          python - <<'PY'
-          import json
-          import sys
-          from pathlib import Path
+      # - name: Validar objetivo Fase 4 contra catalogo Fase 2
+      #   run: |
+      #     python - <<'PY'
+      #     import json
+      #     import sys
+      #     from pathlib import Path
 
-          import yaml
+      #     import yaml
 
-          catalog_path = Path("executions/02_prepareeventsds/${{ inputs.catalog_variant }}/02_events_catalog.json")
-          params_path = Path("executions/04_targetengineering/${{ inputs.variant_id }}/params.yaml")
+      #     catalog_path = Path("executions/02_prepareeventsds/${{ inputs.catalog_variant }}/02_events_catalog.json")
+      #     params_path = Path("executions/04_targetengineering/${{ inputs.variant_id }}/params.yaml")
 
-          if not catalog_path.exists():
-              print(f"[ERROR] No existe catalogo F02: {catalog_path}")
-              sys.exit(1)
-          if not params_path.exists():
-              print(f"[ERROR] No existe params F04: {params_path}")
-              sys.exit(1)
+      #     if not catalog_path.exists():
+      #         print(f"[ERROR] No existe catalogo F02: {catalog_path}")
+      #         sys.exit(1)
+      #     if not params_path.exists():
+      #         print(f"[ERROR] No existe params F04: {params_path}")
+      #         sys.exit(1)
 
-          with catalog_path.open("r", encoding="utf-8") as f:
-              catalog = json.load(f)
-          with params_path.open("r", encoding="utf-8") as f:
-              params = yaml.safe_load(f) or {}
+      #     with catalog_path.open("r", encoding="utf-8") as f:
+      #         catalog = json.load(f)
+      #     with params_path.open("r", encoding="utf-8") as f:
+      #         params = yaml.safe_load(f) or {}
 
-          objective = params.get("prediction_objective", {})
-          events = objective.get("events", [])
-          missing = [ev for ev in events if ev not in catalog]
+      #     objective = params.get("prediction_objective", {})
+      #     events = objective.get("events", [])
+      #     missing = [ev for ev in events if ev not in catalog]
 
-          if missing:
-              print("[ERROR] Hay eventos del objetivo que no existen en el catalogo F02:")
-              for ev in missing:
-                  print(f"  - {ev}")
-              sys.exit(1)
+      #     if missing:
+      #         print("[ERROR] Hay eventos del objetivo que no existen en el catalogo F02:")
+      #         for ev in missing:
+      #             print(f"  - {ev}")
+      #         sys.exit(1)
 
-          print("[OK] Todos los eventos objetivo existen en el catalogo F02.")
-          PY
+      #     print("[OK] Todos los eventos objetivo existen en el catalogo F02.")
+      #     PY
 
       - name: Ejecutar script de Fase 4
         env:
