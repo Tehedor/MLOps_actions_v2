@@ -101,7 +101,7 @@ jobs:
         env:
           PYTHONFAULTHANDLER: 1
         run: |
-          make script5 VARIANT=${{ inputs.variant_id }}
+          make script5-a VARIANT=${{ inputs.variant_id }}
 
       - name: Verificar resultados
         run: |

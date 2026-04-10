@@ -788,6 +788,14 @@ script5: check-variant-format ensure-f56-docker-image
 		$(F56_DOCKER_IMAGE) \
 		bash -lc "python -m $(SCRIPT5_MODULE) --variant $(VARIANT)"
 
+
+script5-a: check-variant-format
+	$(MAKE) script-run-generic \
+		PHASE=$(PHASE5) 
+		SCRIPT=$(SCRIPT5) 
+		VARIANT=$(VARIANT)
+
+
 check5: check-variant-format
 	$(MAKE) check-results-generic \
 		PHASE=$(PHASE5) \
