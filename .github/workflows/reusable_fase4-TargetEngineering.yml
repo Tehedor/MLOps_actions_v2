@@ -108,7 +108,7 @@ jobs:
 
           import yaml
 
-          catalog_path = Path("executions/02_prepareeventsds/${{ inputs.catalog_variant }}/02_prepareeventsds_event_catalog.json")
+          catalog_path = Path("executions/02_prepareeventsds/${{ inputs.catalog_variant }}/02_events_catalog.json")
           params_path = Path("executions/04_targetengineering/${{ inputs.variant_id }}/params.yaml")
 
           if not catalog_path.exists():
