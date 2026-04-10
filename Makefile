@@ -791,8 +791,8 @@ script5: check-variant-format ensure-f56-docker-image
 
 script5-a: check-variant-format
 	$(MAKE) script-run-generic \
-		PHASE=$(PHASE5) 
-		SCRIPT=$(SCRIPT5) 
+		PHASE=$(PHASE5) \
+		SCRIPT_MODULE=$(SCRIPT5_MODULE) \
 		VARIANT=$(VARIANT)
 
 
