@@ -615,6 +615,6 @@ def main():
     print(f"[DONE] F06 completed — edge_capable={edge_capable}")
 
 
-if __name__ == "__main__":
-# test change
-# test change
+# if __name__ == "__main__":
+# # test change
+# # test change
