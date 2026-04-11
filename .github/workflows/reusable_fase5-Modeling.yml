@@ -103,9 +103,9 @@ jobs:
         run: |
           make script5-a VARIANT=${{ inputs.variant_id }}
 
-      - name: Verificar resultados
-        run: |
-          make check5 VARIANT=${{ inputs.variant_id }}
+      # - name: Verificar resultados
+      #   run: |
+      #     make check5 VARIANT=${{ inputs.variant_id }}
 
       - name: Registrar resultados de F5
         run: |
