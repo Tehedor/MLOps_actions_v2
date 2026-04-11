@@ -30,6 +30,9 @@ jobs:
           fetch-depth: 0
           ref: test
 
+      - name: Activar Entorno Virtual (Añadir al PATH)
+        run: echo "$HOME/.venv/bin" >> $GITHUB_PATH
+
       - name: Configurar Git, sincronizar Fase 6 y configurar DVC
         run: |
           git config --global user.name "github-actions[bot]"
