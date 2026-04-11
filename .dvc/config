@@ -1,4 +1,0 @@
-[core]
-    remote = storage
-['remote "storage"']
-    url = https://dagshub.com/Tehedor/MLOps_actions_v2.dvc
