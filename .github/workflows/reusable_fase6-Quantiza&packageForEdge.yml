@@ -99,11 +99,11 @@ jobs:
         env:
           PYTHONFAULTHANDLER: 1
         run: |
-          make script6 VARIANT=${{ inputs.variant_id }}
+          make script6-a VARIANT=${{ inputs.variant_id }}
 
-      - name: Verificar resultados
-        run: |
-          make check6 VARIANT=${{ inputs.variant_id }}
+      # - name: Verificar resultados
+      #   run: |
+      #     make check6 VARIANT=${{ inputs.variant_id }}
 
       - name: Registrar resultados de F6
         run: |

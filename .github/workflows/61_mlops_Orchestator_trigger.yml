@@ -11,6 +11,12 @@ jobs:
   validar-payload:
     runs-on: ubuntu-latest
     steps:
+
+      - name: Print event payload (para debugging)
+        run: |
+          echo "Payload:"
+          echo '${{ toJSON(github.event) }}'
+
       - name: Validar payload de entrada
         run: |
           python - <<'PY'
