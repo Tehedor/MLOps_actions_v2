@@ -1,0 +1,47 @@
+
+    <html>
+    <body>
+      <h1>F05 Modeling — v502</h1>
+      <p><b>Parent F04:</b> v401</p>
+      <p><b>Prediction:</b> battery_overheat</p>
+      <p><b>Model family:</b> cnn1d</p>
+      <h2>Geometry</h2>
+      <ul>
+        <li>Tu = 10</li>
+        <li>OW = 600</li>
+        <li>LT = 100</li>
+        <li>PW = 100</li>
+      </ul>
+      <h2>AutoML</h2>
+      <pre>{
+  "batch_size": 128,
+  "learning_rate": 0.0005,
+  "n_layers": 2,
+  "units": 64,
+  "dropout": 0.0,
+  "embed_dim": 64,
+  "filters": 128,
+  "kernel_size": 3
+}</pre>
+      <h2>Validation</h2>
+      <p>best_val_recall = 0.7045</p>
+      <h2>Test @0.5</h2>
+      <ul>
+        <li>precision = 0.9614</li>
+        <li>recall = 0.7074</li>
+        <li>f1 = 0.8151</li>
+                <li>tp = 249</li>
+                <li>tn = 2990</li>
+                <li>fp = 10</li>
+                <li>fn = 103</li>
+      </ul>
+      <h2>Thresholds</h2>
+      <ul>
+        <li>best_f1_threshold = 0.4550</li>
+        <li>best_recall_threshold = 0.0882</li>
+      </ul>
+      <h2>Execution</h2>
+      <p>execution_time = 442.3 s</p>
+    </body>
+    </html>
+    

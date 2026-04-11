@@ -1,0 +1,69 @@
+phase: f05_modeling
+variant: v502
+artifacts:
+  model:
+    path: 05_modeling_model.h5
+    sha256: 7b8220d6fdbd27c351fbdfcb5f8cdc463ca4c095b6018958956297a5721e8700
+  labeled_dataset:
+    path: 05_modeling_training_dataset.parquet
+    sha256: 90b5bd9101ceb8bb4d79f12c22fbb4a00457080a268987df591e7aa34d9e3f1f
+  history:
+    path: 05_modeling_history.json
+    sha256: b5f57d3f050e78ec4cc1da0beca535a7270b41904ffcce5daa2992f1ab0cb223
+  report:
+    path: 05_modeling_report.html
+    sha256: 81a757778d6abf501b00a650de2763b6b5d99d89eb4be04f009693d0a139c71f
+exports:
+  Tu: 10
+  OW: 600
+  LT: 100
+  PW: 100
+  event_type_count: 102
+  prediction_name: battery_overheat
+  model_family: cnn1d
+  trainable: true
+  decision_threshold: 0.45502063632011414
+  best_val_recall: 0.7045454545454546
+  test_precision: 0.9613899613899614
+  test_recall: 0.7073863636363636
+  test_f1: 0.8150572831423896
+metrics:
+  execution_time: 442.30162288600695
+  n_train: 15642
+  n_val: 3352
+  n_test: 3352
+  positive_ratio_train: 0.10497378851809232
+  tp: 249
+  tn: 2990
+  fp: 10
+  fn: 103
+provenance:
+  generated_at: '2026-04-11T18:34:57.842448+00:00'
+  parent_phase: f04_targets
+  parent_variant: v401
+mlflow_registration:
+  experiment_name: F05_battery_overheat
+  run_name: battery_overheat__v502
+  metrics:
+    val_recall: 0.7045454545454546
+    test_precision: 0.9613899613899614
+    test_recall: 0.7073863636363636
+    test_f1: 0.8150572831423896
+    test_tp: 249
+    test_tn: 2990
+    test_fp: 10
+    test_fn: 103
+  params:
+    batch_size: 128
+    learning_rate: 0.0005
+    n_layers: 2
+    units: 64
+    dropout: 0.0
+    embed_dim: 64
+    filters: 128
+    kernel_size: 3
+    model_family: cnn1d
+  artifacts:
+  - /workspace/executions/f05_modeling/v502/05_modeling_model.h5
+  - /workspace/executions/f05_modeling/v502/05_modeling_history.json
+  - /workspace/executions/f05_modeling/v502/05_modeling_trials_summary.json
