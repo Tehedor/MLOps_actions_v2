@@ -61,7 +61,7 @@ F06 uses Docker for reproducible packaging in the default flow.
 ### F07: Validate a model on edge hardware
 
 ```bash
-make variant7 VARIANT=v701 PARENT=v601 PLATFORM=esp32 MTI_MS=100 TIME_SCALE=0.01
+make variant7 VARIANT=v702 PARENT=v601 PLATFORM=esp32 MTI_MS=100 TIME_SCALE=0.01
 make script7 VARIANT=v701
 make check7 VARIANT=v701
 make register7 VARIANT=v701

@@ -1239,9 +1239,10 @@ script7-post:
 ############################################
 # Full execution (robust)
 ############################################
+# 	@EDGE_CAPABLE="$$($(PYTHON) -c 'import yaml; from pathlib import Path; v="$(VARIANT)"; p=Path("executions")/"f07_modval"/v/"params.yaml"; d=(yaml.safe_load(p.read_text()) or {}) if p.exists() else {}; parent=d.get("parent"); o=(Path("executions")/"f06_packaging"/str(parent)/"outputs.yaml") if parent else None; e=((yaml.safe_load(o.read_text()) or {}).get("exports", {})) if (o and o.exists()) else {}; print("true" if bool(e.get("edge_capable", False)) else "false")')"; \ 
 
 script7:
-	@EDGE_CAPABLE="$$($(PYTHON) -c 'import yaml; from pathlib import Path; v="$(VARIANT)"; p=Path("executions")/"f07_modval"/v/"params.yaml"; d=(yaml.safe_load(p.read_text()) or {}) if p.exists() else {}; parent=d.get("parent"); o=(Path("executions")/"f06_packaging"/str(parent)/"outputs.yaml") if parent else None; e=((yaml.safe_load(o.read_text()) or {}).get("exports", {})) if (o and o.exists()) else {}; print("true" if bool(e.get("edge_capable", False)) else "false")')"; \
+	@EDGE_CAPABLE="$$($(PYTHON) -c 'import yaml; from pathlib import Path; v="$(VARIANT)"; p=Path("executions")/"f07_modval"/v/"params.yaml"; d=(yaml.safe_load(p.read_text()) or {}) if p.exists() else {}; parent=d.get("parent"); o=(Path("executions")/"f06_quant"/str(parent)/"outputs.yaml") if parent else None; e=((yaml.safe_load(o.read_text()) or {}).get("exports", {})) if (o and o.exists()) else {}; print("true" if bool(e.get("edge_capable", False)) else "false")')"; \
 	if [ "$$EDGE_CAPABLE" = "false" ]; then \
 		echo "[INFO] Parent not edge_capable -> running post only"; \
 		$(PYTHON) -m $(SCRIPT7_POST) --variant $(VARIANT); \
