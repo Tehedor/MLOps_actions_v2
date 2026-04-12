@@ -15,7 +15,7 @@ on:
 
 jobs:
   ejecutar-fase-8:
-    runs-on: [self-hosted, Linux, X64, self-hosted-tehelab-esp32-1]
+    runs-on: [self-hosted, Linux, X64, self-hosted-tehelab]
     container:
       image: ${{ vars.IMAGE_MLOPS || 'ghcr.io/tehedor/mlops_actions_v2/mlops-env:latest' }}
     env:
