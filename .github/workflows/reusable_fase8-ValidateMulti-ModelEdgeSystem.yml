@@ -96,28 +96,28 @@ jobs:
           raw = '''${{ inputs.params_json }}'''.strip()
           params = json.loads(raw) if raw else {}
 
-            raw_parents = '''${{ inputs.parents_variant }}'''.strip()
+          raw_parents = '''${{ inputs.parents_variant }}'''.strip()
 
-            def normalize_parents(value: str) -> list[str]:
+          def normalize_parents(value: str) -> list[str]:
               if not value:
-                return []
+                  return []
 
               if value.startswith("["):
-                try:
-                  parsed = json.loads(value)
-                  if isinstance(parsed, list):
-                    return [str(x).strip() for x in parsed if str(x).strip()]
-                except Exception:
-                  pass
+                  try:
+                      parsed = json.loads(value)
+                      if isinstance(parsed, list):
+                          return [str(x).strip() for x in parsed if str(x).strip()]
+                  except Exception:
+                      pass
 
               return [item.strip() for item in value.split(",") if item.strip()]
 
-            parents_list = normalize_parents(raw_parents)
-            if not parents_list:
+          parents_list = normalize_parents(raw_parents)
+          if not parents_list:
               raise RuntimeError("parents_variant vacío o inválido")
 
-            # Forzar formato lista para schema f08 (parents: type=list)
-            parents_make_value = json.dumps(parents_list, ensure_ascii=False)
+          # Forzar formato lista para schema f08 (parents: type=list)
+          parents_make_value = json.dumps(parents_list, ensure_ascii=False)
 
           # Fallback por doble-serialización (si params llegó como string)
           if isinstance(params, str):
