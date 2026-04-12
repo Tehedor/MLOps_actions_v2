@@ -17,8 +17,8 @@ declare -A PHASE_WAIT_MINUTES=(
 	[4]=2
 	[5]=7
 	[6]=3
-	[7]=40
-	[8]=40
+	[7]=56
+	[8]=56
 )
 
 TOKEN=""
