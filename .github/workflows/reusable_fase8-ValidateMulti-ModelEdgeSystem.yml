@@ -46,11 +46,37 @@ jobs:
 
       - name: DVC Pull (Traer datos de Fase 7)
         run: |
-          IFS=',' read -ra PARENTS <<< "${{ inputs.parents_variant }}"
-          for parent in "${PARENTS[@]}"; do
-            parent=$(echo "$parent" | xargs)
-            dvc pull executions/f07_validate/"${parent}"/*.dvc || true
-          done
+          python - <<'PY'
+          import json
+          import subprocess
+
+          raw = '''${{ inputs.parents_variant }}'''.strip()
+
+          def normalize_parents(value: str) -> list[str]:
+            if not value:
+              return []
+
+            # JSON list: ["v701", "v702"]
+            if value.startswith("["):
+              try:
+                parsed = json.loads(value)
+                if isinstance(parsed, list):
+                  return [str(x).strip() for x in parsed if str(x).strip()]
+              except Exception:
+                pass
+
+            # CSV or single value: v701,v702 or v701
+            return [item.strip() for item in value.split(",") if item.strip()]
+
+          parents = normalize_parents(raw)
+          if not parents:
+            print("[WARN] parents_variant vacío; no se ejecuta DVC pull")
+
+          for parent in parents:
+            cmd = ["dvc", "pull", f"executions/f07_validate/{parent}/*.dvc"]
+            print("[INFO] Ejecutando:", " ".join(cmd))
+            subprocess.run(cmd, check=False)
+          PY
 
       - name: Crear variante Fase 8
         run: |
@@ -69,6 +95,29 @@ jobs:
 
           raw = '''${{ inputs.params_json }}'''.strip()
           params = json.loads(raw) if raw else {}
+
+            raw_parents = '''${{ inputs.parents_variant }}'''.strip()
+
+            def normalize_parents(value: str) -> list[str]:
+              if not value:
+                return []
+
+              if value.startswith("["):
+                try:
+                  parsed = json.loads(value)
+                  if isinstance(parsed, list):
+                    return [str(x).strip() for x in parsed if str(x).strip()]
+                except Exception:
+                  pass
+
+              return [item.strip() for item in value.split(",") if item.strip()]
+
+            parents_list = normalize_parents(raw_parents)
+            if not parents_list:
+              raise RuntimeError("parents_variant vacío o inválido")
+
+            # Forzar formato lista para schema f08 (parents: type=list)
+            parents_make_value = json.dumps(parents_list, ensure_ascii=False)
 
           # Fallback por doble-serialización (si params llegó como string)
           if isinstance(params, str):
@@ -95,7 +144,7 @@ jobs:
                   "make",
                   "variant8",
                   "VARIANT=${{ inputs.variant_id }}",
-                  "PARENTS=${{ inputs.parents_variant }}",
+                f"PARENTS={parents_make_value}",
                   *extra_args,
               ],
               check=True,
