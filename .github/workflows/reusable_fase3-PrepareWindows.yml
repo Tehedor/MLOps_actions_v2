@@ -15,7 +15,6 @@ on:
 
 jobs:
   ejecutar-fase-3:
-    # runs-on: [self-hosted, Linux, X64, self-hosted-tehelab]
     runs-on: ubuntu-latest
     container:
       image: ${{ vars.IMAGE_MLOPS || 'ghcr.io/tehedor/mlops_actions_v2/mlops-env:latest' }}
@@ -38,7 +37,6 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global --add safe.directory '*'
-          # git pull origin main --rebase
           dvc remote modify storage --local auth basic
           dvc remote modify storage --local user "$DAGSHUB_USER"
           dvc remote modify storage --local password "$DAGSHUB_TOKEN"
@@ -103,6 +101,3 @@ jobs:
 
       - name: Registrar resultados de Fase 3
         run: make register3 VARIANT=${{ inputs.variant_id }}
-
-      # - name: Empujar resultados de F3 a Git
-      #   run: git push origin HEAD:main

@@ -101,13 +101,10 @@ jobs:
         run: |
           make script6-a VARIANT=${{ inputs.variant_id }}
 
-      # - name: Verificar resultados
-      #   run: |
-      #     make check6 VARIANT=${{ inputs.variant_id }}
+      - name: Verificar resultados
+        run: |
+          make check6 VARIANT=${{ inputs.variant_id }}
 
       - name: Registrar resultados de F6
         run: |
           make register6 VARIANT=${{ inputs.variant_id }}
-
-      # - name: Empujar resultados de F6 a Git
-      #   run: git push origin HEAD:main

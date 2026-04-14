@@ -41,7 +41,6 @@ jobs:
       - name: DVC Pull (Datos Raw)
         run: dvc pull data/raw.csv.dvc
 
-      # - name: Ejecutar Fase 1 (Variante, Script, Check, Register)
       - name: Ejecutar Fase 1 (Variante)
         run: |
           python - <<'PY'
@@ -82,9 +81,3 @@ jobs:
 
       - name: Run Register1
         run: make register1 VARIANT=${{ inputs.variant_id }}
-
-      # - name: Publicar Variante
-      #   run: make publish1 VARIANT=${{ inputs.variant_id }}
-
-      # - name: Empujar resultados de F1 a Git
-      #   run: git push origin HEAD:main
