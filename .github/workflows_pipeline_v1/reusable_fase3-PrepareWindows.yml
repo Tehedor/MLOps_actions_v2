@@ -1,4 +1,4 @@
-name: "2️⃣♻️ Reusable: Fase 2 (Prepare Events)"
+name: "3️⃣♻️ Reusable: Fase 3 (Prepare Windows)"
 
 on:
   workflow_call:
@@ -14,7 +14,7 @@ on:
         type: string
 
 jobs:
-  ejecutar-fase-2:
+  ejecutar-fase-3:
     # runs-on: ubuntu-latest
     runs-on: [self-hosted, self-hosted-k3s-m1]
     container:
@@ -33,7 +33,7 @@ jobs:
           fetch-depth: 0
           ref: test
 
-      - name: Configurar Git, sincronizar Fase 1 y configurar DVC
+      - name: Configurar Git, sincronizar Fase 2 y configurar DVC
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
@@ -42,10 +42,10 @@ jobs:
           dvc remote modify storage --local user "$DAGSHUB_USER"
           dvc remote modify storage --local password "$DAGSHUB_TOKEN"
 
-      - name: DVC Pull (Traer datos de Fase 1)
-        run: dvc pull executions/f01_explore/${{ inputs.parent_variant }}/*.dvc
+      - name: DVC Pull (Traer datos de Fase 2)
+        run: dvc pull executions/f02_events/${{ inputs.parent_variant }}/*.dvc
 
-      - name: Ejecutar Fase 2 (Variante, Script, Check, Register)
+      - name: Crear variante Fase 3
         run: |
           python - <<'PY'
           import json
@@ -70,7 +70,6 @@ jobs:
             if isinstance(value, bool):
               return "true" if value else "false"
             if isinstance(value, (list, dict)):
-              # Compacto y estable para que make reciba un único argumento.
               return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
             return str(value)
 
@@ -86,23 +85,20 @@ jobs:
           subprocess.run(
             [
               "make",
-              "variant2",
+              "variant3",
               "VARIANT=${{ inputs.variant_id }}",
               "PARENT=${{ inputs.parent_variant }}",
               *extra_args,
             ],
             check=True,
           )
-          subprocess.run(["make", "script2", "VARIANT=${{ inputs.variant_id }}"], check=True)
-          # subprocess.run(["make", "check2", "VARIANT=${{ inputs.variant_id }}"], check=True)
-          # subprocess.run(["make", "register2", "VARIANT=${{ inputs.variant_id }}"], check=True)
           PY
-      
-      - name: Run Script2 
-        run: make script2 VARIANT=${{ inputs.variant_id }}
 
-      - name: Run Check2
-        run: make check2 VARIANT=${{ inputs.variant_id }}
+      - name: Ejecutar script de Fase 3
+        run: make script3 VARIANT=${{ inputs.variant_id }}
 
-      - name: Run Register2
-        run: make register2 VARIANT=${{ inputs.variant_id }}
+      - name: Verificar resultados de Fase 3
+        run: make check3 VARIANT=${{ inputs.variant_id }}
+
+      - name: Registrar resultados de Fase 3
+        run: make register3 VARIANT=${{ inputs.variant_id }}

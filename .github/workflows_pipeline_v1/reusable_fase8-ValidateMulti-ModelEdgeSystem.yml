@@ -1,0 +1,166 @@
+name: "8️⃣♻️ Reusable: Fase 8 (Validate Multi-Model Edge System)"
+
+on:
+  workflow_call:
+    inputs:
+      variant_id:
+        required: true
+        type: string
+      parents_variant:
+        required: true
+        type: string
+      params_json:
+        required: true
+        type: string
+
+jobs:
+  ejecutar-fase-8:
+    runs-on: [self-hosted, Linux, X64, self-hosted-tehelab]
+    env:
+      USE_VENV: 0
+      DAGSHUB_USER: ${{ secrets.DAGSHUB_USER }}
+      DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}
+    steps:
+      - name: Checkout del codigo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: test
+
+    # 1️⃣ INYECTAR EL ENTORNO VIRTUAL EN GITHUB ACTIONS
+      - name: Activar Entorno Virtual (Añadir al PATH)
+        run: echo "$HOME/.venv/bin" >> $GITHUB_PATH
+
+      - name: Configurar Git, sincronizar Fase 7 y configurar DVC
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global --add safe.directory '*'
+          dvc remote modify storage --local auth basic
+          dvc remote modify storage --local user "$DAGSHUB_USER"
+          dvc remote modify storage --local password "$DAGSHUB_TOKEN"
+
+      - name: DVC Pull (Traer datos de Fase 7)
+        run: |
+          python - <<'PY'
+          import json
+          import subprocess
+
+          raw = '''${{ inputs.parents_variant }}'''.strip()
+
+          def normalize_parents(value: str) -> list[str]:
+            if not value:
+              return []
+
+            # JSON list: ["v701", "v702"]
+            if value.startswith("["):
+              try:
+                parsed = json.loads(value)
+                if isinstance(parsed, list):
+                  return [str(x).strip() for x in parsed if str(x).strip()]
+              except Exception:
+                pass
+
+            # CSV or single value: v701,v702 or v701
+            return [item.strip() for item in value.split(",") if item.strip()]
+
+          parents = normalize_parents(raw)
+          if not parents:
+            print("[WARN] parents_variant vacío; no se ejecuta DVC pull")
+
+          for parent in parents:
+            cmd = ["dvc", "pull", f"executions/f07_validate/{parent}/*.dvc"]
+            print("[INFO] Ejecutando:", " ".join(cmd))
+            subprocess.run(cmd, check=False)
+          PY
+
+      - name: Crear variante Fase 8
+        run: |
+          python - <<'PY'
+          import json
+          import subprocess
+          import sys
+
+          def to_make_value(value):
+              """Convierte valores Python a argumentos seguros para make."""
+              if isinstance(value, bool):
+                  return "true" if value else "false"
+              if isinstance(value, (list, dict)):
+                  return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+              return str(value)
+
+          raw = '''${{ inputs.params_json }}'''.strip()
+          params = json.loads(raw) if raw else {}
+
+          raw_parents = '''${{ inputs.parents_variant }}'''.strip()
+
+          def normalize_parents(value: str) -> list[str]:
+              if not value:
+                  return []
+
+              if value.startswith("["):
+                  try:
+                      parsed = json.loads(value)
+                      if isinstance(parsed, list):
+                          return [str(x).strip() for x in parsed if str(x).strip()]
+                  except Exception:
+                      pass
+
+              return [item.strip() for item in value.split(",") if item.strip()]
+
+          parents_list = normalize_parents(raw_parents)
+          if not parents_list:
+              raise RuntimeError("parents_variant vacío o inválido")
+
+          # Forzar formato lista para schema f08 (parents: type=list)
+          parents_make_value = json.dumps(parents_list, ensure_ascii=False)
+
+          # Fallback por doble-serialización (si params llegó como string)
+          if isinstance(params, str):
+              try:
+                  params = json.loads(params)
+              except Exception:
+                  pass
+
+          if not isinstance(params, dict):
+              print(f"[WARN] params no es dict, asumiendo dict vacío. Type={type(params)}")
+              params = {}
+
+          extra_args = []
+          for key, value in params.items():
+              k = str(key).strip()
+              if not k:
+                  continue
+              extra_args.append(f"{k}={to_make_value(value)}")
+
+          print("Ejecutando con:", " ".join(extra_args))
+
+          subprocess.run(
+              [
+                  "make",
+                  "variant8",
+                  "VARIANT=${{ inputs.variant_id }}",
+                f"PARENTS={parents_make_value}",
+                  *extra_args,
+              ],
+              check=True,
+          )
+          PY
+
+      - name: Ejecutar script de Fase 8
+        env:
+          PYTHONFAULTHANDLER: 1
+        run: |
+          make script8 VARIANT=${{ inputs.variant_id }}
+
+      - name: Verificar resultados
+        run: |
+          make check8 VARIANT=${{ inputs.variant_id }}
+
+      - name: Registrar resultados de F8
+        run: |
+          make register8 VARIANT=${{ inputs.variant_id }}
+

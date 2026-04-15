@@ -1,0 +1,123 @@
+name: "4️⃣♻️ Reusable: Fase 4 (Target Engineering)"
+
+on:
+  workflow_call:
+    inputs:
+      variant_id:
+        required: true
+        type: string
+      parent_variant:
+        required: true
+        type: string
+      catalog_variant:
+        required: true
+        type: string
+      params_json:
+        required: true
+        type: string
+
+jobs:
+  ejecutar-fase-4:
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ vars.IMAGE_MLOPS || 'ghcr.io/tehedor/mlops_actions_v2/mlops-env:latest' }}
+    env:
+      USE_VENV: 0
+      DAGSHUB_USER: ${{ secrets.DAGSHUB_USER }}
+      DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}
+    steps:
+      - name: Checkout del codigo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: test
+
+      - name: Configurar Git, sincronizar Fase 3 y configurar DVC
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global --add safe.directory '*'
+          # git pull origin main --rebase
+          dvc remote modify storage --local auth basic
+          dvc remote modify storage --local user "$DAGSHUB_USER"
+          dvc remote modify storage --local password "$DAGSHUB_TOKEN"
+
+      - name: DVC Pull (Datos para Fase 4)
+        run: |
+          dvc pull executions/f02_events/${{ inputs.catalog_variant }}/*.dvc executions/f03_windows/${{ inputs.parent_variant }}/*.dvc
+
+      - name: Crear variante Fase 4
+        run: |
+          python - <<'PY'
+          import json
+          import subprocess
+          import sys
+
+          def to_make_value(value):
+              """Convierte valores Python a argumentos seguros para make."""
+              if isinstance(value, bool):
+                  return "true" if value else "false"
+              if isinstance(value, (list, dict)):
+                  return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+              return str(value)
+
+          raw = '''${{ inputs.params_json }}'''.strip()
+          params = json.loads(raw) if raw else {}
+
+          # Fallback por doble-serialización (si params llegó como string)
+          if isinstance(params, str):
+              try:
+                  params = json.loads(params)
+              except Exception:
+                  pass
+
+          if not isinstance(params, dict):
+              print(f"[WARN] params no es dict, asumiendo dict vacío. Type={type(params)}")
+              params = {}
+
+          extra_args = []
+          for key, value in params.items():
+              k = str(key).strip()
+              if not k:
+                  continue
+              extra_args.append(f"{k}={to_make_value(value)}")
+
+          print("Ejecutando con:", " ".join(extra_args))
+
+          subprocess.run(
+              [
+                  "make",
+                  "variant4",
+                  "VARIANT=${{ inputs.variant_id }}",
+                  "PARENT=${{ inputs.parent_variant }}",
+                  *extra_args,
+              ],
+              check=True,
+          )
+          PY
+
+      - name: Ejecutar script de Fase 4 (Con monitor de RAM)
+        env:
+          PYTHONFAULTHANDLER: 1
+        run: |
+          (while true; do echo "[$(date '+%H:%M:%S')] RAM Libre:"; free -m | grep Mem; sleep 10; done) &
+          MONITOR_PID=$!
+          make script4 VARIANT=${{ inputs.variant_id }}
+          kill $MONITOR_PID
+
+      - name: Diagnostico de error (Solo si falla)
+        if: failure()
+        run: |
+          dmesg -T | grep -i -E "killed|oom|out of memory" || echo "No hay logs de OOM en dmesg."
+          free -m
+
+      - name: Verificar resultados
+        run: |
+          make check4 VARIANT=${{ inputs.variant_id }}
+
+      - name: Registrar resultados de F4
+        run: |
+          make register4 VARIANT=${{ inputs.variant_id }}

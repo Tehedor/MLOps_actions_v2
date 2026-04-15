@@ -1,4 +1,4 @@
-name: "3️⃣♻️ Reusable: Fase 3 (Prepare Windows)"
+name: "1️⃣♻️ Reusable: Fase 1 (Explore)"
 
 on:
   workflow_call:
@@ -6,17 +6,13 @@ on:
       variant_id:
         required: true
         type: string
-      parent_variant:
-        required: true
-        type: string
       params_json:
         required: true
         type: string
 
 jobs:
-  ejecutar-fase-3:
-    # runs-on: ubuntu-latest
-    runs-on: [self-hosted, self-hosted-k3s-m2]
+  ejecutar-fase-1:
+    runs-on: ubuntu-latest
     container:
       image: ${{ vars.IMAGE_MLOPS || 'ghcr.io/tehedor/mlops_actions_v2/mlops-env:latest' }}
     env:
@@ -31,9 +27,9 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: test
-
-      - name: Configurar Git, sincronizar Fase 2 y configurar DVC
+          ref: main
+      
+      - name: Configurar Git y DVC
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
@@ -42,63 +38,46 @@ jobs:
           dvc remote modify storage --local user "$DAGSHUB_USER"
           dvc remote modify storage --local password "$DAGSHUB_TOKEN"
 
-      - name: DVC Pull (Traer datos de Fase 2)
-        run: dvc pull executions/f02_events/${{ inputs.parent_variant }}/*.dvc
+      - name: DVC Pull (Datos Raw)
+        run: dvc pull data/raw.csv.dvc
 
-      - name: Crear variante Fase 3
+      - name: Ejecutar Fase 1 (Variante)
         run: |
           python - <<'PY'
           import json
           import subprocess
-          import sys
 
           raw = '''${{ inputs.params_json }}'''.strip()
           params = json.loads(raw) if raw else {}
-
-          # Soporta casos donde params_json llegue serializado dos veces.
-          if isinstance(params, str):
-            try:
-              params = json.loads(params)
-            except Exception:
-              pass
-
-          if not isinstance(params, dict):
-            print("[ERROR] 'params_json' debe representar un objeto JSON (dict)")
-            sys.exit(1)
-
-          def to_make_value(value):
-            if isinstance(value, bool):
-              return "true" if value else "false"
-            if isinstance(value, (list, dict)):
-              return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
-            return str(value)
 
           extra_args = []
           for key, value in params.items():
             k = str(key).strip()
             if not k:
               continue
-            extra_args.append(f"{k}={to_make_value(value)}")
+            extra_args.append(f"{k}={value}")
 
           print("Ejecutando con:", " ".join(extra_args))
 
           subprocess.run(
             [
               "make",
-              "variant3",
+              "variant1",
               "VARIANT=${{ inputs.variant_id }}",
-              "PARENT=${{ inputs.parent_variant }}",
               *extra_args,
             ],
             check=True,
           )
+          # subprocess.run(["make", "script1", "VARIANT=${{ inputs.variant_id }}"], check=True)
+          # subprocess.run(["make", "check1", "VARIANT=${{ inputs.variant_id }}"], check=True)
+          # subprocess.run(["make", "register1", "VARIANT=${{ inputs.variant_id }}"], check=True)
           PY
 
-      - name: Ejecutar script de Fase 3
-        run: make script3 VARIANT=${{ inputs.variant_id }}
+      - name: Run Script1 
+        run: make script1 VARIANT=${{ inputs.variant_id }}
 
-      - name: Verificar resultados de Fase 3
-        run: make check3 VARIANT=${{ inputs.variant_id }}
+      - name: Run Check1
+        run: make check1 VARIANT=${{ inputs.variant_id }}
 
-      - name: Registrar resultados de Fase 3
-        run: make register3 VARIANT=${{ inputs.variant_id }}
+      - name: Run Register1
+        run: make register1 VARIANT=${{ inputs.variant_id }}
