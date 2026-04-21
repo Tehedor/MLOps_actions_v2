@@ -71,5 +71,18 @@ runs:
           --base "${{ inputs.base_branch }}" \
           --head "$BRANCH_NAME"
 
-        # 6) Activar auto-merge rebase
-        gh pr merge "$BRANCH_NAME" --auto --rebase --delete-branch
+        # 6) Activar auto-merge rebase (o merge directo si ya esta en clean status)
+        set +e
+        MERGE_OUT=$(gh pr merge "$BRANCH_NAME" --auto --rebase --delete-branch 2>&1)
+        MERGE_RC=$?
+        set -e
+
+        if [[ $MERGE_RC -ne 0 ]]; then
+          echo "$MERGE_OUT"
+          if echo "$MERGE_OUT" | grep -qi "in clean status"; then
+            echo "[INFO] PR ya mergeable: haciendo merge directo con rebase"
+            gh pr merge "$BRANCH_NAME" --rebase --delete-branch
+          else
+            exit $MERGE_RC
+          fi
+        fi
