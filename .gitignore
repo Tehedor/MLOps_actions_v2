@@ -58,3 +58,5 @@ data/*.pkl
 
 
 run*.csv
+
+.github/60_deploy-api.http
