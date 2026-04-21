@@ -83,7 +83,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           PR_NUMBER='${{ steps.pr-variant.outputs.PR_NUMBER }}'
-          if [[ -z "$PR_NUMBER" ]]; then
+          if [ -z "$PR_NUMBER" ]; then
             echo "[ERROR] PR_NUMBER vacío en merge de variant" >&2
             exit 1
           fi
@@ -113,7 +113,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           PR_NUMBER='${{ steps.pr-script.outputs.PR_NUMBER }}'
-          if [[ -z "$PR_NUMBER" ]]; then
+          if [ -z "$PR_NUMBER" ]; then
             echo "[ERROR] PR_NUMBER vacío en merge de script" >&2
             exit 1
           fi
@@ -143,7 +143,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           PR_NUMBER='${{ steps.pr-check.outputs.PR_NUMBER }}'
-          if [[ -z "$PR_NUMBER" ]]; then
+          if [ -z "$PR_NUMBER" ]; then
             echo "[ERROR] PR_NUMBER vacío en merge de check" >&2
             exit 1
           fi
@@ -176,7 +176,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           PR_NUMBER='${{ steps.pr-register.outputs.PR_NUMBER }}'
-          if [[ -z "$PR_NUMBER" ]]; then
+          if [ -z "$PR_NUMBER" ]; then
             echo "[ERROR] PR_NUMBER vacío en merge de register" >&2
             exit 1
           fi
