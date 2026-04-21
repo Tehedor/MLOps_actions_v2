@@ -10,6 +10,11 @@ on:
         required: true
         type: string
 
+# CRÍTICO: permisos para abrir PRs y hacer push
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   ejecutar-fase-1:
     runs-on: ubuntu-latest
@@ -19,6 +24,9 @@ jobs:
       USE_VENV: 0
       DAGSHUB_USER: ${{ secrets.DAGSHUB_USER }}
       DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
+      # Desactiva git push interno del Makefile en register-generic
+      SKIP_GIT_PUBLISH: "1"
+      SKIP_LINEAGE: "1"   
     defaults:
       run:
         working-directory: ${{ github.workspace }}
@@ -28,7 +36,9 @@ jobs:
         with:
           fetch-depth: 0
           ref: main
-      
+          # Necesario para que `gh` y `git push` tengan credenciales
+          token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Configurar Git y DVC
         run: |
           git config --global user.name "github-actions[bot]"
@@ -41,43 +51,86 @@ jobs:
       - name: DVC Pull (Datos Raw)
         run: dvc pull data/raw.csv.dvc
 
-      - name: Ejecutar Fase 1 (Variante)
+      # =========================================================
+      # STEP 1: variant1 → crea params.yaml + metadata.yaml
+      # =========================================================
+      - name: Ejecutar make variant1
         run: |
           python - <<'PY'
-          import json
-          import subprocess
-
+          import json, subprocess
           raw = '''${{ inputs.params_json }}'''.strip()
           params = json.loads(raw) if raw else {}
-
-          extra_args = []
-          for key, value in params.items():
-            k = str(key).strip()
-            if not k:
-              continue
-            extra_args.append(f"{k}={value}")
-
+          extra_args = [f"{str(k).strip()}={v}" for k, v in params.items() if str(k).strip()]
           print("Ejecutando con:", " ".join(extra_args))
-
           subprocess.run(
-            [
-              "make",
-              "variant1",
-              "VARIANT=${{ inputs.variant_id }}",
-              *extra_args,
-            ],
-            check=True,
+              ["make", "variant1", "VARIANT=${{ inputs.variant_id }}", *extra_args],
+              check=True,
           )
-          # subprocess.run(["make", "script1", "VARIANT=${{ inputs.variant_id }}"], check=True)
-          # subprocess.run(["make", "check1", "VARIANT=${{ inputs.variant_id }}"], check=True)
-          # subprocess.run(["make", "register1", "VARIANT=${{ inputs.variant_id }}"], check=True)
           PY
 
-      - name: Run Script1 
+      - name: PR — publicar variant (params.yaml + metadata.yaml)
+        uses: ./.github/actions/commit-and-pr
+        with:
+          variant_id: ${{ inputs.variant_id }}
+          phase_id: f1
+          step: variant
+          paths: |
+            executions/f01_explore/${{ inputs.variant_id }}/params.yaml
+            executions/f01_explore/${{ inputs.variant_id }}/metadata.yaml
+            executions/f01_explore/${{ inputs.variant_id }}/creation_context.yaml
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      # =========================================================
+      # STEP 2: script1 → actualiza metadata.yaml (lifecycle_state)
+      # =========================================================
+      - name: Run Script1
         run: make script1 VARIANT=${{ inputs.variant_id }}
 
+      - name: PR — publicar script (metadata actualizada + outputs)
+        uses: ./.github/actions/commit-and-pr
+        with:
+          variant_id: ${{ inputs.variant_id }}
+          phase_id: f1
+          step: script
+          paths: |
+            executions/f01_explore/${{ inputs.variant_id }}/metadata.yaml
+            executions/f01_explore/${{ inputs.variant_id }}/outputs.yaml
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      # =========================================================
+      # STEP 3: check1 → actualiza metadata.yaml (verified)
+      # =========================================================
       - name: Run Check1
         run: make check1 VARIANT=${{ inputs.variant_id }}
 
+      - name: PR — publicar check (metadata verified)
+        uses: ./.github/actions/commit-and-pr
+        with:
+          variant_id: ${{ inputs.variant_id }}
+          phase_id: f1
+          step: check
+          paths: |
+            executions/f01_explore/${{ inputs.variant_id }}/metadata.yaml
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      # =========================================================
+      # STEP 4: register1 → DVC add + DVC push + metadata.yaml
+      # ¡OJO!: SKIP_GIT_PUBLISH=1 hace que el Makefile NO commitee ni haga push
+      # =========================================================
       - name: Run Register1
         run: make register1 VARIANT=${{ inputs.variant_id }}
+
+      - name: PR — publicar register (.dvc + metadata registred)
+        uses: ./.github/actions/commit-and-pr
+        with:
+          variant_id: ${{ inputs.variant_id }}
+          phase_id: f1
+          step: register
+          paths: |
+            executions/f01_explore/${{ inputs.variant_id }}/metadata.yaml
+            executions/f01_explore/${{ inputs.variant_id }}/*.dvc
+            executions/f01_explore/${{ inputs.variant_id }}/.gitignore
+            .dvc/config
+            dvc.yaml
+            dvc.lock
+          github_token: ${{ secrets.GITHUB_TOKEN }}
