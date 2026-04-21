@@ -13,9 +13,6 @@ inputs:
   paths:
     required: true
     description: "Paths a añadir al commit (separados por espacios, uno por línea también vale)"
-  base_branch:
-    required: false
-    default: "main"
   github_token:
     required: true
 runs:
@@ -29,20 +26,8 @@ runs:
       run: |
         set -eu
 
-        # 1) ¿Hay algo que commitear?
-        PATHS_RAW='${{ inputs.paths }}'
-        PATH_ARGS=()
-        while IFS= read -r line; do
-          # Trim espacios laterales
-          line="${line#"${line%%[![:space:]]*}"}"
-          line="${line%"${line##*[![:space:]]}"}"
-          [[ -z "$line" ]] && continue
-
-          # Permite rutas separadas por espacios y/o por lineas
-          read -r -a parts <<< "$line"
-          PATH_ARGS+=("${parts[@]}")
-        done <<< "$PATHS_RAW"
-
+        # 1) Parsear paths multilinea en array
+        readarray -t PATH_ARGS < <(xargs -n1 <<< '${{ inputs.paths }}' | awk '{$1=$1};1' | grep -v '^\s*$')
         if [[ ${#PATH_ARGS[@]} -gt 0 ]]; then
           git add -- "${PATH_ARGS[@]}" 2>/dev/null || true
         fi
@@ -51,38 +36,48 @@ runs:
           exit 0
         fi
 
-        # 2) Rama efímera única (incluye run_attempt para reintentos)
+        # 2) Rama efímera única
         git checkout -b "$BRANCH_NAME"
 
         # 3) Commit
         git commit -m "🤖 AutoML (${{ inputs.phase_id }}/${{ inputs.step }}): ${{ inputs.variant_id }}"
 
-        # 4) Push (con retry por si otra job pisó el remoto justo ahora)
+        # 4) Push con retry
         for i in 1 2 3; do
           if git push -u origin "$BRANCH_NAME"; then break; fi
           echo "[WARN] push falló intento $i, reintento…"
           sleep $((i * 3))
         done
 
-        # 5) Abrir PR
+        # 5) Detectar rama base desde setup de proyecto
+        BASE_BRANCH=$(python - <<'PY'
+import re, yaml
+for cfg in [".mlops4ofp/setup.yaml", "MLproject"]:
+    try:
+        with open(cfg, encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+            if isinstance(data, dict) and "git" in data:
+                branch = str(data["git"].get("branch", "")).strip()
+                if branch: print(branch); break
+    except FileNotFoundError:
+        pass
+PY
+)
+        BASE_BRANCH=${BASE_BRANCH:-main}
+        echo "[INFO] Base branch: $BASE_BRANCH"
+
+        # 6) Abrir PR
         gh pr create \
           --title "🚀 AutoML ${{ inputs.phase_id }}/${{ inputs.step }}: ${{ inputs.variant_id }}" \
           --body "PR automática para la variante **${{ inputs.variant_id }}**, step **${{ inputs.step }}**." \
-          --base "${{ inputs.base_branch }}" \
+          --base "$BASE_BRANCH" \
           --head "$BRANCH_NAME"
 
-        # 6) Activar auto-merge rebase (o merge directo si ya esta en clean status)
-        set +e
-        MERGE_OUT=$(gh pr merge "$BRANCH_NAME" --auto --rebase --delete-branch 2>&1)
-        MERGE_RC=$?
-        set -e
-
-        if [[ $MERGE_RC -ne 0 ]]; then
-          echo "$MERGE_OUT"
-          if echo "$MERGE_OUT" | grep -qi "in clean status"; then
-            echo "[INFO] PR ya mergeable: haciendo merge directo con rebase"
-            gh pr merge "$BRANCH_NAME" --rebase --delete-branch
-          else
-            exit $MERGE_RC
-          fi
+        # 7) Activar auto-merge rebase o mergear directo si posible
+        if gh pr merge "$BRANCH_NAME" --auto --rebase --delete-branch 2>/dev/null; then
+          echo "[INFO] PR configurada con auto-merge rebase"
+        elif gh pr merge "$BRANCH_NAME" --rebase --delete-branch 2>/dev/null; then
+          echo "[INFO] PR lista para merge — mergeada directamente"  
+        else
+          echo "[WARN] Ni auto-merge ni merge directo funcionaron — dejando PR abierta"
         fi
