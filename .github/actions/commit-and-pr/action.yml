@@ -17,10 +17,16 @@ inputs:
   github_token:
     required: true
 
+outputs:
+  PR_NUMBER:
+    description: "Numero de PR creado"
+    value: ${{ steps.commit_pr.outputs.PR_NUMBER }}
+
 runs:
   using: "composite"
   steps:
     - name: Commit + PR
+      id: commit_pr
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.github_token }}
@@ -53,18 +59,57 @@ runs:
 
         # 5) Detectar rama base desde setup de proyecto
         BASE_BRANCH=$(python - <<'PY'
-import re, yaml
-for cfg in [".mlops4ofp/setup.yaml", "MLproject"]:
-    try:
-        with open(cfg, encoding="utf-8") as f:
-            data = yaml.safe_load(f)
-            if isinstance(data, dict) and "git" in data:
-                branch = str(data["git"].get("branch", "")).strip()
-                if branch: print(branch); break
-    except FileNotFoundError:
-        pass
-PY
-)
+        import re
+        from pathlib import Path
+
+        candidates = [
+          ".mlops4ofp/setup.yaml",
+          "setup/remote.yaml",
+          "setup/remote2.yaml",
+          "setup/local.yaml",
+        ]
+
+        def parse_with_yaml(text):
+          try:
+            import yaml
+          except Exception:
+            return ""
+          try:
+            data = yaml.safe_load(text)
+            if isinstance(data, dict) and isinstance(data.get("git"), dict):
+              return str(data["git"].get("branch", "")).strip()
+          except Exception:
+            return ""
+          return ""
+
+        def parse_with_regex(text):
+          in_git = False
+          for raw in text.splitlines():
+            line = raw.rstrip()
+            if not line.strip() or line.lstrip().startswith("#"):
+              continue
+            if re.match(r"^git\s*:\s*$", line):
+              in_git = True
+              continue
+            if in_git and re.match(r"^[^\s].*:\s*", line):
+              in_git = False
+            if in_git:
+              m = re.match(r"^\s+branch\s*:\s*(.+?)\s*$", line)
+              if m:
+                return m.group(1).strip().strip("\"'")
+          return ""
+
+        for cfg in candidates:
+          p = Path(cfg)
+          if not p.exists():
+            continue
+          text = p.read_text(encoding="utf-8")
+          branch = parse_with_yaml(text) or parse_with_regex(text)
+          if branch:
+            print(branch)
+            break
+        PY
+        )
         BASE_BRANCH=${BASE_BRANCH:-main}
         echo "[INFO] Base branch: $BASE_BRANCH"
 
