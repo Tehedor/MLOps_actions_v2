@@ -30,7 +30,22 @@ runs:
         set -eu
 
         # 1) ¿Hay algo que commitear?
-        git add -- ${{ inputs.paths }} 2>/dev/null || true
+        PATHS_RAW='${{ inputs.paths }}'
+        PATH_ARGS=()
+        while IFS= read -r line; do
+          # Trim espacios laterales
+          line="${line#"${line%%[![:space:]]*}"}"
+          line="${line%"${line##*[![:space:]]}"}"
+          [[ -z "$line" ]] && continue
+
+          # Permite rutas separadas por espacios y/o por lineas
+          read -r -a parts <<< "$line"
+          PATH_ARGS+=("${parts[@]}")
+        done <<< "$PATHS_RAW"
+
+        if [[ ${#PATH_ARGS[@]} -gt 0 ]]; then
+          git add -- "${PATH_ARGS[@]}" 2>/dev/null || true
+        fi
         if git diff --cached --quiet; then
           echo "[INFO] Sin cambios staged para ${{ inputs.step }} — se omite PR"
           exit 0
