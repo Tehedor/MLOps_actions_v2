@@ -69,7 +69,7 @@ jobs:
           PY
 
       - name: PR — publicar variant (params.yaml + metadata.yaml)
-        uses: ./.github/actions/commit-and-pr
+        uses: ./.github/workflows/actions/commit-and-pr
         with:
           variant_id: ${{ inputs.variant_id }}
           phase_id: f1
@@ -87,7 +87,7 @@ jobs:
         run: make script1 VARIANT=${{ inputs.variant_id }}
 
       - name: PR — publicar script (metadata actualizada + outputs)
-        uses: ./.github/actions/commit-and-pr
+        uses: ./.github/workflows/actions/commit-and-pr
         with:
           variant_id: ${{ inputs.variant_id }}
           phase_id: f1
@@ -104,7 +104,7 @@ jobs:
         run: make check1 VARIANT=${{ inputs.variant_id }}
 
       - name: PR — publicar check (metadata verified)
-        uses: ./.github/actions/commit-and-pr
+        uses: ./.github/workflows/actions/commit-and-pr
         with:
           variant_id: ${{ inputs.variant_id }}
           phase_id: f1
@@ -121,7 +121,7 @@ jobs:
         run: make register1 VARIANT=${{ inputs.variant_id }}
 
       - name: PR — publicar register (.dvc + metadata registred)
-        uses: ./.github/actions/commit-and-pr
+        uses: ./.github/workflows/actions/commit-and-pr
         with:
           variant_id: ${{ inputs.variant_id }}
           phase_id: f1
