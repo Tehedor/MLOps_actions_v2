@@ -335,7 +335,6 @@ variant-generic: check-variant-format
 ############################################
 # Register variant
 ############################################
-
 register-generic: check-variant-format
 	@set -eu; \
 	VARIANT_NORM="$$($(NORMALIZE_VARIANT))"; \
@@ -354,7 +353,9 @@ register-generic: check-variant-format
 	for ext in $(DVC_EXTS); do \
 		$(DVC) add "$(VARIANTS_DIR)/$$VARIANT_NORM"/*.$$ext 2>/dev/null || true; \
 	done; \
-	if [ "$$MODE" = "custom" ]; then \
+	if [ -n "$${SKIP_GIT_PUBLISH:-}" ]; then \
+		echo "[INFO] SKIP_GIT_PUBLISH=1 — skipping internal git add/commit/push (CI will handle publish)"; \
+	elif [ "$$MODE" = "custom" ]; then \
 		echo "==> Adding files to Git"; \
 		git add "$(VARIANTS_DIR)/$$VARIANT_NORM" 2>/dev/null || true; \
 		git add "$(VARIANTS_DIR)/$$VARIANT_NORM"/*.dvc 2>/dev/null || true; \
@@ -1770,5 +1771,9 @@ help: help-setup help1 help2 help3 help4 help5 help6 help7 help8
 ############################################
 # Utils
 ############################################
-generate_lineage: 
-	${PYTHON} scripts/core/variants_lineage/generate_lineage.py
+generate_lineage:
+	@if [ -n "$${SKIP_LINEAGE:-}" ]; then \
+		echo "[INFO] SKIP_LINEAGE is set — skipping lineage generation"; \
+	else \
+		$(PYTHON) scripts/core/variants_lineage/generate_lineage.py; \
+	fi
