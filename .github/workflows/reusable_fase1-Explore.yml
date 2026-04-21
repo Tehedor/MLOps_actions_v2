@@ -10,7 +10,6 @@ on:
         required: true
         type: string
 
-# CRÍTICO: permisos para abrir PRs y hacer push
 permissions:
   contents: write
   pull-requests: write
@@ -24,7 +23,6 @@ jobs:
       USE_VENV: 0
       DAGSHUB_USER: ${{ secrets.DAGSHUB_USER }}
       DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
-      # Desactiva git push interno del Makefile en register-generic
       SKIP_GIT_PUBLISH: "1"
       SKIP_LINEAGE: "1"   
     defaults:
@@ -36,7 +34,6 @@ jobs:
         with:
           fetch-depth: 0
           ref: main
-          # Necesario para que `gh` y `git push` tengan credenciales
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Configurar Git y DVC
@@ -68,8 +65,9 @@ jobs:
           )
           PY
 
-      - name: PR — publicar variant (params.yaml + metadata.yaml)
-        uses: ./.github/workflows/actions/commit-and-pr
+      - name: PR — publicar variant
+        id: pr-variant
+        uses: ./.github/actions/commit-and-pr
         with:
           variant_id: ${{ inputs.variant_id }}
           phase_id: f1
@@ -79,6 +77,10 @@ jobs:
             executions/f01_explore/${{ inputs.variant_id }}/metadata.yaml
             executions/f01_explore/${{ inputs.variant_id }}/creation_context.yaml
           github_token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Merge PR de variant
+        run: |
+          gh pr merge "${{ steps.pr-variant.outputs.PR_NUMBER }}" --squash --delete-branch
 
       # =========================================================
       # STEP 2: script1 → actualiza metadata.yaml (lifecycle_state)
@@ -86,8 +88,9 @@ jobs:
       - name: Run Script1
         run: make script1 VARIANT=${{ inputs.variant_id }}
 
-      - name: PR — publicar script (metadata actualizada + outputs)
-        uses: ./.github/workflows/actions/commit-and-pr
+      - name: PR — publicar script
+        id: pr-script 
+        uses: ./.github/actions/commit-and-pr
         with:
           variant_id: ${{ inputs.variant_id }}
           phase_id: f1
@@ -96,15 +99,22 @@ jobs:
             executions/f01_explore/${{ inputs.variant_id }}/metadata.yaml
             executions/f01_explore/${{ inputs.variant_id }}/outputs.yaml
           github_token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Merge PR de script
+        if: always()  # Siempre intentar el merge para actualizar el estado
+        run: |
+          gh pr merge "${{ steps.pr-script.outputs.PR_NUMBER }}" --squash --delete-branch
 
       # =========================================================
-      # STEP 3: check1 → actualiza metadata.yaml (verified)
+      # STEP 3: check1 → actualiza metadata.yaml (verified) 
       # =========================================================
       - name: Run Check1
         run: make check1 VARIANT=${{ inputs.variant_id }}
 
-      - name: PR — publicar check (metadata verified)
-        uses: ./.github/workflows/actions/commit-and-pr
+      - name: PR — publicar check
+        id: pr-check
+        if: always()  # Siempre crear el PR para actualizar el estado
+        uses: ./.github/actions/commit-and-pr
         with:
           variant_id: ${{ inputs.variant_id }}
           phase_id: f1
@@ -112,16 +122,21 @@ jobs:
           paths: |
             executions/f01_explore/${{ inputs.variant_id }}/metadata.yaml
           github_token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Merge PR de check
+        if: always()  # Siempre intentar el merge para actualizar el estado
+        run: |
+          gh pr merge "${{ steps.pr-check.outputs.PR_NUMBER }}" --squash --delete-branch
 
       # =========================================================
       # STEP 4: register1 → DVC add + DVC push + metadata.yaml
-      # ¡OJO!: SKIP_GIT_PUBLISH=1 hace que el Makefile NO commitee ni haga push
       # =========================================================
-      - name: Run Register1
+      - name: Run Register1 
         run: make register1 VARIANT=${{ inputs.variant_id }}
 
-      - name: PR — publicar register (.dvc + metadata registred)
-        uses: ./.github/workflows/actions/commit-and-pr
+      - name: PR — publicar register
+        id: pr-register
+        uses: ./.github/actions/commit-and-pr
         with:
           variant_id: ${{ inputs.variant_id }}
           phase_id: f1
@@ -134,3 +149,7 @@ jobs:
             dvc.yaml
             dvc.lock
           github_token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Merge PR de register  
+        run: |
+          gh pr merge "${{ steps.pr-register.outputs.PR_NUMBER }}" --squash --delete-branch

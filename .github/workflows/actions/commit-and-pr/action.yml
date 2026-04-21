@@ -1,11 +1,12 @@
-name: "Commit + PR con auto-merge"
-description: "Empaqueta archivos modificados en una rama efímera, abre PR y activa auto-merge rebase"
+name: "Commit + PR"
+description: "Empaqueta archivos modificados en una rama efímera y abre un PR"
+
 inputs:
   variant_id:
     required: true
     description: "ID de la variante (ej. v0001)"
   phase_id:
-    required: true
+    required: true 
     description: "ID de la fase (ej. f1, f2, ...) — usado para nombrar la rama"
   step:
     required: true
@@ -15,10 +16,11 @@ inputs:
     description: "Paths a añadir al commit (separados por espacios, uno por línea también vale)"
   github_token:
     required: true
+
 runs:
   using: "composite"
   steps:
-    - name: Commit + PR con auto-merge rebase
+    - name: Commit + PR
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.github_token }}
@@ -72,12 +74,7 @@ PY
           --body "PR automática para la variante **${{ inputs.variant_id }}**, step **${{ inputs.step }}**." \
           --base "$BASE_BRANCH" \
           --head "$BRANCH_NAME"
-
-        # 7) Activar auto-merge rebase o mergear directo si posible
-        if gh pr merge "$BRANCH_NAME" --auto --rebase --delete-branch 2>/dev/null; then
-          echo "[INFO] PR configurada con auto-merge rebase"
-        elif gh pr merge "$BRANCH_NAME" --rebase --delete-branch 2>/dev/null; then
-          echo "[INFO] PR lista para merge — mergeada directamente"  
-        else
-          echo "[WARN] Ni auto-merge ni merge directo funcionaron — dejando PR abierta"
-        fi
+        
+        # 7) Obtener el número de PR
+        PR_NUMBER=$(gh pr view "$BRANCH_NAME" --json number --jq .number)
+        echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_OUTPUT
