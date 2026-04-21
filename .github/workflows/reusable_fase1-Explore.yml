@@ -79,8 +79,15 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Merge PR de variant
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh pr merge "${{ steps.pr-variant.outputs.PR_NUMBER }}" --squash --delete-branch
+          PR_NUMBER='${{ steps.pr-variant.outputs.PR_NUMBER }}'
+          if [[ -z "$PR_NUMBER" ]]; then
+            echo "[ERROR] PR_NUMBER vacío en merge de variant" >&2
+            exit 1
+          fi
+          gh pr merge "$PR_NUMBER" --squash --delete-branch
 
       # =========================================================
       # STEP 2: script1 → actualiza metadata.yaml (lifecycle_state)
@@ -102,8 +109,15 @@ jobs:
       
       - name: Merge PR de script
         if: always()  # Siempre intentar el merge para actualizar el estado
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh pr merge "${{ steps.pr-script.outputs.PR_NUMBER }}" --squash --delete-branch
+          PR_NUMBER='${{ steps.pr-script.outputs.PR_NUMBER }}'
+          if [[ -z "$PR_NUMBER" ]]; then
+            echo "[ERROR] PR_NUMBER vacío en merge de script" >&2
+            exit 1
+          fi
+          gh pr merge "$PR_NUMBER" --squash --delete-branch
 
       # =========================================================
       # STEP 3: check1 → actualiza metadata.yaml (verified) 
@@ -125,8 +139,15 @@ jobs:
       
       - name: Merge PR de check
         if: always()  # Siempre intentar el merge para actualizar el estado
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh pr merge "${{ steps.pr-check.outputs.PR_NUMBER }}" --squash --delete-branch
+          PR_NUMBER='${{ steps.pr-check.outputs.PR_NUMBER }}'
+          if [[ -z "$PR_NUMBER" ]]; then
+            echo "[ERROR] PR_NUMBER vacío en merge de check" >&2
+            exit 1
+          fi
+          gh pr merge "$PR_NUMBER" --squash --delete-branch
 
       # =========================================================
       # STEP 4: register1 → DVC add + DVC push + metadata.yaml
@@ -151,5 +172,12 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Merge PR de register  
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh pr merge "${{ steps.pr-register.outputs.PR_NUMBER }}" --squash --delete-branch
+          PR_NUMBER='${{ steps.pr-register.outputs.PR_NUMBER }}'
+          if [[ -z "$PR_NUMBER" ]]; then
+            echo "[ERROR] PR_NUMBER vacío en merge de register" >&2
+            exit 1
+          fi
+          gh pr merge "$PR_NUMBER" --squash --delete-branch

@@ -113,13 +113,17 @@ runs:
         BASE_BRANCH=${BASE_BRANCH:-main}
         echo "[INFO] Base branch: $BASE_BRANCH"
 
-        # 6) Abrir PR
-        gh pr create \
+        # 6) Abrir PR y capturar la URL de forma fiable
+        PR_URL=$(gh pr create \
           --title "🚀 AutoML ${{ inputs.phase_id }}/${{ inputs.step }}: ${{ inputs.variant_id }}" \
           --body "PR automática para la variante **${{ inputs.variant_id }}**, step **${{ inputs.step }}**." \
           --base "$BASE_BRANCH" \
           --head "$BRANCH_NAME"
-        
-        # 7) Obtener el número de PR
-        PR_NUMBER=$(gh pr view "$BRANCH_NAME" --json number --jq .number)
-        echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_OUTPUT
+        )
+
+        PR_NUMBER=$(printf '%s' "$PR_URL" | grep -oE '/pull/[0-9]+' | tail -n1 | cut -d/ -f3)
+        if [[ -z "$PR_NUMBER" ]]; then
+          echo "[ERROR] No se pudo extraer PR_NUMBER desde: $PR_URL" >&2
+          exit 1
+        fi
+        echo "PR_NUMBER=$PR_NUMBER" >> "$GITHUB_OUTPUT"
