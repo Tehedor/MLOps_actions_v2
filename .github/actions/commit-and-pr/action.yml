@@ -34,11 +34,17 @@ runs:
       run: |
         set -eu
 
-        # 1) Parsear paths multilinea en array
-        readarray -t PATH_ARGS < <(xargs -n1 <<< '${{ inputs.paths }}' | awk '{$1=$1};1' | grep -v '^\s*$')
-        if [[ ${#PATH_ARGS[@]} -gt 0 ]]; then
-          git add -- "${PATH_ARGS[@]}" 2>/dev/null || true
-        fi
+        # 1) Procesar paths multilinea permitiendo expansión de globs
+        while IFS= read -r pattern || [[ -n "$pattern" ]]; do
+          # Limpiar whitespace
+          pattern=$(echo "$pattern" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+          [[ -z "$pattern" ]] && continue
+          # Permitir expansión de globs (ej. *.dvc)
+          for file in $pattern; do
+            [[ -e "$file" ]] && git add -- "$file" 2>/dev/null || true
+          done
+        done <<< '${{ inputs.paths }}'
+        
         if git diff --cached --quiet; then
           echo "[INFO] Sin cambios staged para ${{ inputs.step }} — se omite PR"
           exit 0
