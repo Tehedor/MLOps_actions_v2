@@ -25,8 +25,8 @@ jobs:
       DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
       SKIP_GIT_PUBLISH: "1"
       SKIP_LINEAGE: "1"   
-      F1_VARIANT_ROOT: executions/f01_explore/${{ inputs.variant_id }}
-      F1_REGISTER_EXCLUDE_EXTS: |
+      VARIANT_ROOT: executions/f01_explore/${{ inputs.variant_id }}
+      REGISTER_EXCLUDE_EXTS: |
         .h5
         .parquet
         .tflite
@@ -154,7 +154,7 @@ jobs:
           phase_id: f1
           step: register
           paths: |
-            ${{ env.F1_VARIANT_ROOT }}
+            ${{ env.VARIANT_ROOT }}
             .dvc/config
             dvc.yaml
             dvc.lock

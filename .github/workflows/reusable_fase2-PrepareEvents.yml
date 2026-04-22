@@ -13,6 +13,10 @@ on:
         required: true
         type: string
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   ejecutar-fase-2:
     # runs-on: ubuntu-latest
@@ -23,6 +27,11 @@ jobs:
       USE_VENV: 0
       DAGSHUB_USER: ${{ secrets.DAGSHUB_USER }}
       DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
+      VARIANT_ROOT: executions/f02_events/${{ inputs.variant_id }}
+      REGISTER_EXCLUDE_EXTS: |
+        .h5
+        .parquet
+        .tflite
     defaults:
       run:
         working-directory: ${{ github.workspace }}
@@ -106,3 +115,24 @@ jobs:
 
       - name: Run Register2
         run: make register2 VARIANT=${{ inputs.variant_id }}
+
+      - name: PR — publicar register
+        id: pr-register
+        uses: ./.github/actions/commit-and-pr
+        with:
+          variant_id: ${{ inputs.variant_id }}
+          phase_id: f2
+          step: register
+          paths: |
+            ${{ env.VARIANT_ROOT }}
+            .dvc/config
+            dvc.yaml
+            dvc.lock
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Merge PR de register
+        if: ${{ steps.pr-register.outputs.PR_NUMBER != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr merge "${{ steps.pr-register.outputs.PR_NUMBER }}" --squash --delete-branch

@@ -13,6 +13,10 @@ on:
         required: true
         type: string
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   ejecutar-fase-5:
     runs-on: ubuntu-latest
@@ -24,6 +28,11 @@ jobs:
       DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
       MLFLOW_TRACKING_USERNAME: ${{ secrets.MLFLOW_TRACKING_USERNAME }}
       MLFLOW_TRACKING_PASSWORD: ${{ secrets.MLFLOW_TRACKING_PASSWORD }}
+      VARIANT_ROOT: executions/f05_modeling/${{ inputs.variant_id }}
+      REGISTER_EXCLUDE_EXTS: |
+        .h5
+        .parquet
+        .tflite
     defaults:
       run:
         working-directory: ${{ github.workspace }}
@@ -109,4 +118,25 @@ jobs:
       - name: Registrar resultados de F5
         run: |
           make register5 VARIANT=${{ inputs.variant_id }}
+
+      - name: PR — publicar register
+        id: pr-register
+        uses: ./.github/actions/commit-and-pr
+        with:
+          variant_id: ${{ inputs.variant_id }}
+          phase_id: f5
+          step: register
+          paths: |
+            ${{ env.VARIANT_ROOT }}
+            .dvc/config
+            dvc.yaml
+            dvc.lock
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Merge PR de register
+        if: ${{ steps.pr-register.outputs.PR_NUMBER != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr merge "${{ steps.pr-register.outputs.PR_NUMBER }}" --squash --delete-branch
 
