@@ -34,14 +34,46 @@ runs:
       run: |
         set -eu
 
-        # 1) Procesar paths multilinea permitiendo expansión de globs
+        # 1) Procesar paths multilinea; si una entrada es directorio, añadir su contenido
+        #    excluyendo artefactos pesados por extensión.
+        exclude_case=''
+        if [[ -n "${REGISTER_EXCLUDE_EXTS:-}" ]]; then
+          while IFS= read -r ext || [[ -n "$ext" ]]; do
+            ext=$(printf '%s' "$ext" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+            [[ -z "$ext" ]] && continue
+            ext=${ext#.}
+            if [[ -z "$exclude_case" ]]; then
+              exclude_case="*.$ext"
+            else
+              exclude_case="$exclude_case|*.$ext"
+            fi
+          done <<< "$REGISTER_EXCLUDE_EXTS"
+        fi
+
         while IFS= read -r pattern || [[ -n "$pattern" ]]; do
-          # Limpiar whitespace
-          pattern=$(echo "$pattern" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+          pattern=$(printf '%s' "$pattern" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
           [[ -z "$pattern" ]] && continue
-          # Permitir expansión de globs (ej. *.dvc)
+
+          if [[ -d "$pattern" ]]; then
+            while IFS= read -r -d '' file; do
+              if [[ -n "$exclude_case" ]]; then
+                case "$file" in
+                  $exclude_case) continue ;;
+                esac
+              fi
+              git add -- "$file" 2>/dev/null || true
+            done < <(find "$pattern" -type f -print0)
+            continue
+          fi
+
           for file in $pattern; do
-            [[ -e "$file" ]] && git add -- "$file" 2>/dev/null || true
+            [[ -e "$file" ]] || continue
+            if [[ -n "$exclude_case" ]]; then
+              case "$file" in
+                $exclude_case) continue ;;
+              esac
+            fi
+            git add -- "$file" 2>/dev/null || true
           done
         done <<< '${{ inputs.paths }}'
         

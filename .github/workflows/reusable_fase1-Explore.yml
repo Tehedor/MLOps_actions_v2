@@ -25,6 +25,11 @@ jobs:
       DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
       SKIP_GIT_PUBLISH: "1"
       SKIP_LINEAGE: "1"   
+      F1_VARIANT_ROOT: executions/f01_explore/${{ inputs.variant_id }}
+      F1_REGISTER_EXCLUDE_EXTS: |
+        .h5
+        .parquet
+        .tflite
     defaults:
       run:
         working-directory: ${{ github.workspace }}
@@ -149,9 +154,7 @@ jobs:
           phase_id: f1
           step: register
           paths: |
-            executions/f01_explore/${{ inputs.variant_id }}/metadata.yaml
-            executions/f01_explore/${{ inputs.variant_id }}/*.dvc
-            executions/f01_explore/${{ inputs.variant_id }}/.gitignore
+            ${{ env.F1_VARIANT_ROOT }}
             .dvc/config
             dvc.yaml
             dvc.lock
