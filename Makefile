@@ -982,10 +982,15 @@ register5: check-variant-format
 			echo 'metrics=reg.get("metrics",{})' >> $$TMP_SCRIPT; \
 			echo 'params=reg.get("params",{})' >> $$TMP_SCRIPT; \
 			echo 'artifacts=reg.get("artifacts",[])' >> $$TMP_SCRIPT; \
+			echo 'fallback_experiment_id=str(os.environ.get("MLFLOW_EXPERIMENT_ID","0"))' >> $$TMP_SCRIPT; \
 			echo 'client=MlflowClient()' >> $$TMP_SCRIPT; \
 			echo 'exp=client.get_experiment_by_name(experiment_name)' >> $$TMP_SCRIPT; \
 			echo 'if exp is None:' >> $$TMP_SCRIPT; \
-			echo '    exp_id=client.create_experiment(experiment_name)' >> $$TMP_SCRIPT; \
+			echo '    try:' >> $$TMP_SCRIPT; \
+			echo '        exp_id=client.create_experiment(experiment_name)' >> $$TMP_SCRIPT; \
+			echo '    except Exception as exc:' >> $$TMP_SCRIPT; \
+			echo '        exp_id=fallback_experiment_id' >> $$TMP_SCRIPT; \
+			echo '        print(f"[WARN] Could not create experiment {experiment_name}: {exc}. Falling back to experiment_id={exp_id}")' >> $$TMP_SCRIPT; \
 			echo 'else:' >> $$TMP_SCRIPT; \
 			echo '    exp_id=exp.experiment_id' >> $$TMP_SCRIPT; \
 			echo 'if not exp_id:' >> $$TMP_SCRIPT; \
