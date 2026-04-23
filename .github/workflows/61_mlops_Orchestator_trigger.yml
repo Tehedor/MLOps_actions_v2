@@ -145,11 +145,11 @@ jobs:
               print(f"[ERROR] En {fase} falta 'parent_variant' en client_payload")
               sys.exit(1)
 
-            if fase == FASE_08 and not payload.get("parents_variant"):
+          if fase == FASE_08 and not payload.get("parents_variant"):
               print("[ERROR] En fase8 falta 'parents_variant' en client_payload")
               sys.exit(1)
 
-            if fase == FASE_04 and not payload.get("catalog_variant"):
+          if fase == FASE_04 and not payload.get("catalog_variant"):
               print("[ERROR] En fase4 falta 'catalog_variant' en client_payload")
               sys.exit(1)
 
