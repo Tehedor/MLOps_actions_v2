@@ -11,8 +11,19 @@ permissions:
 jobs:
   validar-payload:
     runs-on: ubuntu-latest
+    env:
+      FASES_ALLOWED: "01_explore,02_prepareeventsds,03_preparewindowsds,04_targetengineering,05_modeling,06_packaging,07_deployrun,08_multimodelsystem"
+      FASES_REQUIRING_PARENT: "02_prepareeventsds,03_preparewindowsds,04_targetengineering,05_modeling,06_packaging,07_deployrun" 
     outputs:
       fase:           ${{ steps.validar.outputs.fase }}
+      fase_01:        ${{ steps.validar.outputs.fase_01 }}
+      fase_02:        ${{ steps.validar.outputs.fase_02 }}
+      fase_03:        ${{ steps.validar.outputs.fase_03 }}
+      fase_04:        ${{ steps.validar.outputs.fase_04 }}
+      fase_05:        ${{ steps.validar.outputs.fase_05 }}
+      fase_06:        ${{ steps.validar.outputs.fase_06 }}
+      fase_07:        ${{ steps.validar.outputs.fase_07 }}
+      fase_08:        ${{ steps.validar.outputs.fase_08 }}
       variant_id:     ${{ steps.validar.outputs.variant_id }}
       parent_variant: ${{ steps.validar.outputs.parent_variant }}
       parents_variant: ${{ steps.validar.outputs.parents_variant }}
@@ -56,15 +67,26 @@ jobs:
           python3 - <<'PY'
           import json, re, sys, os
 
-          FASES_ALLOWED = {
-            "01_explore", "02_prepareeventsds", "03_preparewindowsds",
-            "04_targetengineering", "05_modeling", "06_packaging",
-            "07_deployrun", "08_multimodelsystem"
-          }
-          FASES_REQUIRING_PARENT = {
-            "02_prepareeventsds", "03_preparewindowsds", "04_targetengineering",
-            "05_modeling", "06_packaging", "07_deployrun"
-          }
+          def parse_csv_env(name: str) -> list[str]:
+              raw = os.environ.get(name, "")
+              values = [item.strip() for item in raw.split(",") if item.strip()]
+              if not values:
+                  print(f"[ERROR] Variable de entorno vacia o invalida: {name}")
+                  sys.exit(1)
+              return values
+
+          fases_allowed_list = parse_csv_env("FASES_ALLOWED")
+          fases_requiring_parent_list = parse_csv_env("FASES_REQUIRING_PARENT")
+
+          FASES_ALLOWED = set(fases_allowed_list)
+          FASES_REQUIRING_PARENT = set(fases_requiring_parent_list)
+
+          if len(fases_allowed_list) < 8:
+              print("[ERROR] FASES_ALLOWED debe incluir al menos 8 fases ordenadas")
+              sys.exit(1)
+
+          FASE_04 = fases_allowed_list[3]
+          FASE_08 = fases_allowed_list[7]
 
           def normalize_variant(fase: str, variant: str) -> str:
               """
@@ -123,11 +145,11 @@ jobs:
               print(f"[ERROR] En {fase} falta 'parent_variant' en client_payload")
               sys.exit(1)
 
-          if fase == "08_multimodelsystem" and not payload.get("parents_variant"):
+            if fase == FASE_08 and not payload.get("parents_variant"):
               print("[ERROR] En fase8 falta 'parents_variant' en client_payload")
               sys.exit(1)
 
-          if fase == "04_targetengineering" and not payload.get("catalog_variant"):
+            if fase == FASE_04 and not payload.get("catalog_variant"):
               print("[ERROR] En fase4 falta 'catalog_variant' en client_payload")
               sys.exit(1)
 
@@ -180,12 +202,21 @@ jobs:
 
           if payload.get("catalog_variant"):
               catalog_variant = normalize_variant_for_fase(
-                  fase, payload["catalog_variant"], "catalog_variant"
+                # En F04, catalog_variant siempre referencia artefactos de F02.
+                "02_catalog", payload["catalog_variant"], "catalog_variant"
               )
 
           # ── Write outputs ──────────────────────────────────────────────────────
           outputs = {
               "fase":            fase,
+              "fase_01":         fases_allowed_list[0],
+              "fase_02":         fases_allowed_list[1],
+              "fase_03":         fases_allowed_list[2],
+              "fase_04":         fases_allowed_list[3],
+              "fase_05":         fases_allowed_list[4],
+              "fase_06":         fases_allowed_list[5],
+              "fase_07":         fases_allowed_list[6],
+              "fase_08":         fases_allowed_list[7],
               "variant_id":      variant_id,
               "parent_variant":  parent_variant,
               "parents_variant": parents_variant,
@@ -204,7 +235,7 @@ jobs:
 
   trigger-fase1:
     needs: validar-payload
-    if: ${{ needs.validar-payload.outputs.fase == '01_explore' }}
+    if: ${{ needs.validar-payload.outputs.fase == needs.validar-payload.outputs.fase_01 }}
     uses: ./.github/workflows/reusable_fase1-Explore.yml
     with:
       variant_id:  ${{ needs.validar-payload.outputs.variant_id }}
@@ -214,7 +245,7 @@ jobs:
 
   trigger-fase2:
     needs: validar-payload
-    if: ${{ needs.validar-payload.outputs.fase == '02_prepareeventsds' }}
+    if: ${{ needs.validar-payload.outputs.fase == needs.validar-payload.outputs.fase_02 }}
     uses: ./.github/workflows/reusable_fase2-PrepareEvents.yml
     with:
       variant_id:     ${{ needs.validar-payload.outputs.variant_id }}
@@ -225,7 +256,7 @@ jobs:
 
   trigger-fase3:
     needs: validar-payload
-    if: ${{ needs.validar-payload.outputs.fase == '03_preparewindowsds' }}
+    if: ${{ needs.validar-payload.outputs.fase == needs.validar-payload.outputs.fase_03 }}
     uses: ./.github/workflows/reusable_fase3-PrepareWindows.yml
     with:
       variant_id:     ${{ needs.validar-payload.outputs.variant_id }}
@@ -236,7 +267,7 @@ jobs:
 
   trigger-fase4:
     needs: validar-payload
-    if: ${{ needs.validar-payload.outputs.fase == '04_targetengineering' }}
+    if: ${{ needs.validar-payload.outputs.fase == needs.validar-payload.outputs.fase_04 }}
     uses: ./.github/workflows/reusable_fase4-TargetEngineering.yml
     with:
       variant_id:      ${{ needs.validar-payload.outputs.variant_id }}
@@ -248,7 +279,7 @@ jobs:
 
   trigger-fase5:
     needs: validar-payload
-    if: ${{ needs.validar-payload.outputs.fase == '05_modeling' }}
+    if: ${{ needs.validar-payload.outputs.fase == needs.validar-payload.outputs.fase_05 }}
     uses: ./.github/workflows/reusable_fase5-Modeling.yml
     with:
       variant_id:     ${{ needs.validar-payload.outputs.variant_id }}
@@ -259,7 +290,7 @@ jobs:
 
   trigger-fase6:
     needs: validar-payload
-    if: ${{ needs.validar-payload.outputs.fase == '06_packaging' }}
+    if: ${{ needs.validar-payload.outputs.fase == needs.validar-payload.outputs.fase_06 }}
     uses: ./.github/workflows/reusable_fase6-Quantiza&packageForEdge.yml
     with:
       variant_id:     ${{ needs.validar-payload.outputs.variant_id }}
@@ -270,7 +301,7 @@ jobs:
 
   trigger-fase7:
     needs: validar-payload
-    if: ${{ needs.validar-payload.outputs.fase == '07_deployrun' }}
+    if: ${{ needs.validar-payload.outputs.fase == needs.validar-payload.outputs.fase_07 }}
     uses: ./.github/workflows/reusable_fase7-ValidateModelEdgeHardware.yml
     with:
       variant_id:     ${{ needs.validar-payload.outputs.variant_id }}
@@ -281,7 +312,7 @@ jobs:
 
   trigger-fase8:
     needs: validar-payload
-    if: ${{ needs.validar-payload.outputs.fase == '08_multimodelsystem' }}
+    if: ${{ needs.validar-payload.outputs.fase == needs.validar-payload.outputs.fase_08 }}
     uses: ./.github/workflows/reusable_fase8-ValidateMulti-ModelEdgeSystem.yml
     with:
       variant_id:      ${{ needs.validar-payload.outputs.variant_id }}
