@@ -947,7 +947,6 @@ check5: check-variant-format
 ############################################
 # PUBLICAR + REGISTRO MLFLOW
 ############################################
-
 register5: check-variant-format
 	@test -n "$(VARIANT)" || (echo "[ERROR] Usage: make register5 VARIANT=v5XX"; exit 1)
 	@set -eu; \
@@ -962,49 +961,71 @@ register5: check-variant-format
 			echo "[ERROR] outputs.yaml not found in $$VAR_DIR"; exit 1; \
 		fi; \
 		if ! command -v mlflow >/dev/null 2>&1; then \
-			echo "[INFO] MLflow CLI not found in local environment — skipping MLflow registration"; \
+			echo "[INFO] MLflow CLI not found — skipping MLflow registration"; \
 		else \
-			TMP_SCRIPT=$$(mktemp mlflow_register_XXXX.py); \
-			echo 'import os,subprocess,yaml,json,pathlib,sys' > $$TMP_SCRIPT; \
-			echo 'from mlflow.tracking import MlflowClient' >> $$TMP_SCRIPT; \
-			echo 'variant=os.environ.get("VARIANT")' >> $$TMP_SCRIPT; \
-			echo 'phase=os.environ.get("PHASE5","f05_modeling")' >> $$TMP_SCRIPT; \
-			echo 'outs_path=pathlib.Path(f"executions/{phase}/{variant}/outputs.yaml")' >> $$TMP_SCRIPT; \
-			echo 'data=(yaml.safe_load(outs_path.read_text()) if outs_path.exists() else None)' >> $$TMP_SCRIPT; \
-			echo 'if data is None:' >> $$TMP_SCRIPT; \
-			echo '    print(f"[ERROR] outputs.yaml not found at {outs_path}")' >> $$TMP_SCRIPT; \
-			echo '    sys.exit(1)' >> $$TMP_SCRIPT; \
-			echo 'reg=(data.get("mlflow_registration") if isinstance(data,dict) else None)' >> $$TMP_SCRIPT; \
-			echo 'if not reg:' >> $$TMP_SCRIPT; \
-			echo '    print("[WARN] No '\''mlflow_registration'\'' block in outputs.yaml - skipping MLflow registration")' >> $$TMP_SCRIPT; \
-			echo '    sys.exit(0)' >> $$TMP_SCRIPT; \
-			echo 'experiment_name=(reg.get("experiment_name") or f"F05_{variant}")' >> $$TMP_SCRIPT; \
-			echo 'metrics=reg.get("metrics",{})' >> $$TMP_SCRIPT; \
-			echo 'params=reg.get("params",{})' >> $$TMP_SCRIPT; \
-			echo 'artifacts=reg.get("artifacts",[])' >> $$TMP_SCRIPT; \
-			echo 'fallback_experiment_id=str(os.environ.get("MLFLOW_EXPERIMENT_ID","0"))' >> $$TMP_SCRIPT; \
-			echo 'client=MlflowClient()' >> $$TMP_SCRIPT; \
-			echo 'exp=client.get_experiment_by_name(experiment_name)' >> $$TMP_SCRIPT; \
-			echo 'if exp is None:' >> $$TMP_SCRIPT; \
-			echo '    try:' >> $$TMP_SCRIPT; \
-			echo '        exp_id=client.create_experiment(experiment_name)' >> $$TMP_SCRIPT; \
-			echo '    except Exception as exc:' >> $$TMP_SCRIPT; \
-			echo '        exp_id=fallback_experiment_id' >> $$TMP_SCRIPT; \
-			echo '        print(f"[WARN] Could not create experiment {experiment_name}: {exc}. Falling back to experiment_id={exp_id}")' >> $$TMP_SCRIPT; \
-			echo 'else:' >> $$TMP_SCRIPT; \
-			echo '    exp_id=exp.experiment_id' >> $$TMP_SCRIPT; \
-			echo 'if not exp_id:' >> $$TMP_SCRIPT; \
-			echo '    print(f"[ERROR] Could not obtain experiment_id for {experiment_name}")' >> $$TMP_SCRIPT; \
-			echo '    sys.exit(1)' >> $$TMP_SCRIPT; \
-			echo 'run=json.loads(subprocess.check_output(["mlflow","runs","create","--experiment-id",exp_id,"--format","json"]))' >> $$TMP_SCRIPT; \
-			echo 'run_id=run["info"]["run_id"]' >> $$TMP_SCRIPT; \
-			echo '[subprocess.run(["mlflow","runs","log-param","--run-id",run_id,"--key",str(k),"--value",str(v)]) for k,v in params.items()]' >> $$TMP_SCRIPT; \
-			echo '[subprocess.run(["mlflow","runs","log-metric","--run-id",run_id,"--key",str(k),"--value",str(v)]) for k,v in metrics.items()]' >> $$TMP_SCRIPT; \
-			echo '[subprocess.run(["mlflow","runs","log-artifact","--run-id",run_id,"--local-path",a]) for a in artifacts if os.path.exists(a)]' >> $$TMP_SCRIPT; \
-			echo 'data["mlflow"]={"run_id":run_id,"experiment_id":exp_id,"experiment_name":experiment_name}' >> $$TMP_SCRIPT; \
-			echo 'outs_path.write_text(yaml.safe_dump(data, sort_keys=False))' >> $$TMP_SCRIPT; \
-			echo 'print(f"[OK] MLflow run created: {run_id} (experiment: {experiment_name})")' >> $$TMP_SCRIPT; \
-			VARIANT="$$VARIANT_NORM" PHASE5="$(PHASE5)" $(PYTHON) $$TMP_SCRIPT; \
+			TMP_SCRIPT=$$(mktemp /tmp/mlflow_register_XXXX.py); \
+			MLFLOW_URI="$$($(PYTHON) -c 'import pathlib,yaml; p=pathlib.Path(".mlops4ofp/setup.yaml"); cfg=yaml.safe_load(p.read_text()); print(cfg.get("mlflow",{}).get("tracking_uri",""))')"; \
+			cat > $$TMP_SCRIPT << 'PYEOF'
+import os, yaml, pathlib, sys
+import mlflow
+from mlflow.tracking import MlflowClient
+
+variant    = os.environ["VARIANT"]
+phase      = os.environ.get("PHASE5", "f05_modeling")
+mlflow_uri = os.environ.get("MLFLOW_URI", "")
+
+if mlflow_uri:
+    mlflow.set_tracking_uri(mlflow_uri)
+
+client = MlflowClient()
+
+outs_path = pathlib.Path(f"executions/{phase}/{variant}/outputs.yaml")
+data = yaml.safe_load(outs_path.read_text()) if outs_path.exists() else None
+if data is None:
+    print(f"[ERROR] outputs.yaml not found at {outs_path}")
+    sys.exit(1)
+
+reg = data.get("mlflow_registration") if isinstance(data, dict) else None
+if not reg:
+    print("[WARN] No 'mlflow_registration' block in outputs.yaml - skipping")
+    sys.exit(0)
+
+experiment_name = reg.get("experiment_name") or f"F05_{variant}"
+metrics   = reg.get("metrics", {})
+params    = reg.get("params", {})
+artifacts = reg.get("artifacts", [])
+
+exp = client.get_experiment_by_name(experiment_name)
+if exp is None:
+    try:
+        exp_id = client.create_experiment(experiment_name)
+        print(f"[INFO] Experiment created: {experiment_name} (id={exp_id})")
+    except Exception as exc:
+        print(f"[ERROR] Could not create experiment '{experiment_name}': {exc}")
+        sys.exit(1)
+else:
+    exp_id = exp.experiment_id
+    print(f"[INFO] Using existing experiment: {experiment_name} (id={exp_id})")
+
+with mlflow.start_run(experiment_id=exp_id) as run:
+    run_id = run.info.run_id
+    for k, v in params.items():
+        mlflow.log_param(k, v)
+    for k, v in metrics.items():
+        mlflow.log_metric(k, float(v))
+    for a in artifacts:
+        if os.path.exists(a):
+            mlflow.log_artifact(a)
+
+data["mlflow"] = {
+    "run_id": run_id,
+    "experiment_id": exp_id,
+    "experiment_name": experiment_name,
+}
+outs_path.write_text(yaml.safe_dump(data, sort_keys=False))
+print(f"[OK] MLflow run created: {run_id} (experiment: {experiment_name})")
+PYEOF
+			MLFLOW_URI="$$MLFLOW_URI" VARIANT="$$VARIANT_NORM" PHASE5="$(PHASE5)" $(PYTHON) $$TMP_SCRIPT; \
 			rm -f $$TMP_SCRIPT; \
 		fi; \
 	else \
