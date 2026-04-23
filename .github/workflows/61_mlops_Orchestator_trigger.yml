@@ -19,7 +19,35 @@ jobs:
       catalog_variant: ${{ steps.validar.outputs.catalog_variant }}
       params_json:    ${{ steps.validar.outputs.params_json }}
 
+      checkout_branch: ${{ steps.read-config.outputs.checkout_branch }}
     steps:
+      - name: Checkout repo (para leer config)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Leer configuración de rama
+        id: read-config
+        run: |
+          python3 - <<'PY'
+          import yaml
+          import os
+
+          try:
+              # with open("setup/workflow.yaml", "r") as f:
+              with open(".mlops4ofp/setup.yaml", "r") as f:
+                  config = yaml.safe_load(f) or {}
+              checkout_branch = config.get("git", {}).get("branch", "test")
+          except Exception as e:
+              print(f"[WARN] No se pudo leer .mlops4ofp/setup.yaml: {e}. Usando 'test' por defecto")
+              checkout_branch = "test"
+
+          output_path = os.environ.get("GITHUB_OUTPUT")
+          with open(output_path, "a") as fh:
+              fh.write(f"checkout_branch={checkout_branch}\n")
+          print(f"[INFO] checkout_branch={checkout_branch}")
+          PY
+
       - name: Validar y normalizar payload
         id: validar
         env:
@@ -181,6 +209,7 @@ jobs:
     with:
       variant_id:  ${{ needs.validar-payload.outputs.variant_id }}
       params_json: ${{ needs.validar-payload.outputs.params_json }}
+      checkout_branch: ${{ needs.validar-payload.outputs.checkout_branch }}
     secrets: inherit
 
   trigger-fase2:
@@ -191,6 +220,7 @@ jobs:
       variant_id:     ${{ needs.validar-payload.outputs.variant_id }}
       parent_variant: ${{ needs.validar-payload.outputs.parent_variant }}
       params_json:    ${{ needs.validar-payload.outputs.params_json }}
+      checkout_branch: ${{ needs.validar-payload.outputs.checkout_branch }}
     secrets: inherit
 
   trigger-fase3:
@@ -201,6 +231,7 @@ jobs:
       variant_id:     ${{ needs.validar-payload.outputs.variant_id }}
       parent_variant: ${{ needs.validar-payload.outputs.parent_variant }}
       params_json:    ${{ needs.validar-payload.outputs.params_json }}
+      checkout_branch: ${{ needs.validar-payload.outputs.checkout_branch }}
     secrets: inherit
 
   trigger-fase4:
@@ -212,6 +243,7 @@ jobs:
       parent_variant:  ${{ needs.validar-payload.outputs.parent_variant }}
       catalog_variant: ${{ needs.validar-payload.outputs.catalog_variant }}
       params_json:     ${{ needs.validar-payload.outputs.params_json }}
+      checkout_branch: ${{ needs.validar-payload.outputs.checkout_branch }}
     secrets: inherit
 
   trigger-fase5:
@@ -222,6 +254,7 @@ jobs:
       variant_id:     ${{ needs.validar-payload.outputs.variant_id }}
       parent_variant: ${{ needs.validar-payload.outputs.parent_variant }}
       params_json:    ${{ needs.validar-payload.outputs.params_json }}
+      checkout_branch: ${{ needs.validar-payload.outputs.checkout_branch }}
     secrets: inherit
 
   trigger-fase6:
@@ -232,6 +265,7 @@ jobs:
       variant_id:     ${{ needs.validar-payload.outputs.variant_id }}
       parent_variant: ${{ needs.validar-payload.outputs.parent_variant }}
       params_json:    ${{ needs.validar-payload.outputs.params_json }}
+      checkout_branch: ${{ needs.validar-payload.outputs.checkout_branch }}
     secrets: inherit
 
   trigger-fase7:
@@ -242,6 +276,7 @@ jobs:
       variant_id:     ${{ needs.validar-payload.outputs.variant_id }}
       parent_variant: ${{ needs.validar-payload.outputs.parent_variant }}
       params_json:    ${{ needs.validar-payload.outputs.params_json }}
+      checkout_branch: ${{ needs.validar-payload.outputs.checkout_branch }}
     secrets: inherit
 
   trigger-fase8:
@@ -252,4 +287,5 @@ jobs:
       variant_id:      ${{ needs.validar-payload.outputs.variant_id }}
       parents_variant: ${{ needs.validar-payload.outputs.parents_variant }}
       params_json:     ${{ needs.validar-payload.outputs.params_json }}
+      checkout_branch: ${{ needs.validar-payload.outputs.checkout_branch }}
     secrets: inherit
