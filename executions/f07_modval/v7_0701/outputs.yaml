@@ -1,0 +1,45 @@
+generated_at: '2026-04-23T18:45:19.265700'
+phase: f07_modval
+parent:
+  phase: f06_quant
+  variant: v6_0601
+artifacts:
+- executions/f07_modval/v7_0701/07_model_profile.yaml
+- executions/f07_modval/v7_0701/metrics_models.csv
+- executions/f07_modval/v7_0701/metrics_memory.csv
+- executions/f07_modval/v7_0701/metrics_system_timing.csv
+exports:
+  edge_capable: true
+  incompatibility_reason: null
+  model_id: battery_overheat-cnn1d-v5_0502__esp32
+  runtime_model_name: battery_overheat-cnn1d-v5_0502
+  prediction_name: battery_overheat
+  platform: esp32
+  Tu: 10
+  OW: 600
+  LT: 100
+  PW: 100
+  event_type_count: 102
+  operators:
+  - CAST
+  - CONV_2D
+  - DEQUANTIZE
+  - EXPAND_DIMS
+  - FULLY_CONNECTED
+  - GATHER
+  - LOGISTIC
+  - REDUCE_MAX
+  - RESHAPE
+  decision_threshold: 0.4645543098449707
+  arena_bytes: 79392
+  model_memory_bytes: 52928
+  itmax_ms: 2137205.763
+  ITmax: 100
+  MTI_MS: 100
+  quality_score: 0.0
+  n_inferences: 791.0
+  ok_rate: 0.05596434130465544
+  offload_rate: 0.0
+  watchdog_rate: 0.0
+  edge_run_completed: true
+  phase_status_reason: completed
