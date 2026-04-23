@@ -142,4 +142,3 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh pr merge "${{ steps.pr-register.outputs.PR_NUMBER }}" --squash --delete-branch
-
