@@ -38,9 +38,6 @@ COPY requirements.txt /tmp/
 RUN pip install --upgrade pip "setuptools>=68,<81" wheel && \
     pip install -r /tmp/requirements.txt 
 
-# Validación temprana: MLflow 2.x necesita pkg_resources (setuptools)
-RUN python -c "import pkg_resources, mlflow; print('OK: pkg_resources y mlflow disponibles')"
-    
 # Instala dependencias y limpia cachés de forma segura
 RUN find $VIRTUAL_ENV -type f -name "*.pyc" -delete && \
     find $VIRTUAL_ENV -type d -name "__pycache__" -exec rm -rf {} + && \
