@@ -71,17 +71,10 @@ check-setup:
 	@echo "==> Verifying project setup configuration"
 	@$(PYTHON) setup/check_setup.py
 
+
 clean-setup:
 	@echo "==> Removing MLflow associated with the project (if exists)"
-	@$(PYTHON_LOCAL) -c 'import os,pathlib,shutil,sys,yaml; from mlflow.tracking import MlflowClient; cfg_path=pathlib.Path(".mlops4ofp/setup.yaml"); sys.exit(0) if not cfg_path.exists() else None; cfg=yaml.safe_load(cfg_path.read_text()) or {}; ml=cfg.get("mlflow", {}) or {}; sys.exit(0) if not ml.get("enabled", False) else None; uri=(ml.get("tracking_uri", "") or "");
-if uri.startswith("file:"):
-    path=uri.replace("file:", "");
-    print(f"[INFO] Removing local MLflow at {path}") if os.path.exists(path) else None;
-    shutil.rmtree(path) if os.path.exists(path) else None;
-    sys.exit(0);
-print("[INFO] Remote MLflow detected: removing project experiments (prefix F05_") );
-client=MlflowClient(tracking_uri=uri);
-[print(f"[INFO] Removing remote experiment {exp.name}") or client.delete_experiment(exp.experiment_id) for exp in client.search_experiments() if (exp.name or "").startswith("F05_") and exp.experiment_id]' 2>/dev/null || true
+	@$(PYTHON_LOCAL) -c 'import yaml,pathlib,subprocess,os,shutil,json,sys;cfg_path=pathlib.Path(".mlops4ofp/setup.yaml");sys.exit(0) if not cfg_path.exists() else None;cfg=yaml.safe_load(cfg_path.read_text());ml=cfg.get("mlflow",{});sys.exit(0) if not ml.get("enabled",False) else None;uri=ml.get("tracking_uri","");(print(f"[INFO] Removing local MLflow at {path}") or shutil.rmtree(path)) if uri.startswith("file:") and os.path.exists(path:=uri.replace("file:","")) else (print("[INFO] Remote MLflow detected: removing project experiments (prefix F05_)") or [print(f"[INFO] Removing remote experiment {exp.get(\"name\",\"\")}") or subprocess.run(["mlflow","experiments","delete","--experiment-id",exp.get("experiment_id")],check=False) for exp in (experiments:=json.loads(subprocess.check_output(["mlflow","experiments","list","--format","json"]))) if exp.get("name","").startswith("F05_") and exp.get("experiment_id")] if True else None) if uri else None' 2>/dev/null || true
 	@echo "==> Removing complete ML project environment"
 # 	@rm -rf .mlops4ofp .dvc .dvc_storage local_dvc_store .venv executions
 	@rm -rf .mlops4ofp .dvc .dvc_storage local_dvc_store executions
