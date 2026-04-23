@@ -1,0 +1,60 @@
+phase: f06_quant
+variant: v6_0601
+artifacts:
+  calibration_dataset:
+    path: 06_calibration_dataset.parquet
+    sha256: 90b5bd9101ceb8bb4d79f12c22fbb4a00457080a268987df591e7aa34d9e3f1f
+  report:
+    path: 06_quant_report.html
+    sha256: f9002dcb08026a0a7c07f484b1a2846dd71f41b1aba63326d05816e201121bf1
+  model_float:
+    path: 06_model_float.h5
+    sha256: fb075a50bd74c3779a98a717d133d4302ce70cb1dc7af8b7e300cd78f64e2531
+  model_tflite:
+    path: 06_model_tflite.tflite
+    sha256: 4aaaf6f8cbb394b59e7e30926d21d8e3f2ca37ee054250f7bff21678c5710fe7
+  eedu_manifest:
+    path: eedu/eedu_manifest.yaml
+    sha256: 29bff87de98fcfd4f64ee801ca16122bb9487933ea860bf97798ceffa571e9b5
+exports:
+  Tu: 10
+  OW: 600
+  LT: 100
+  PW: 100
+  event_type_count: 102
+  prediction_name: battery_overheat
+  runtime_model_name: battery_overheat-cnn1d-v5_0502
+  model_family: cnn1d
+  edge_capable: true
+  decision_threshold: 0.4645543098449707
+  model_size_bytes: 52928
+  arena_estimated_bytes: 79392
+  footprint_estimated_bytes: 132320
+  operators:
+  - CAST
+  - CONV_2D
+  - DEQUANTIZE
+  - EXPAND_DIMS
+  - FULLY_CONNECTED
+  - GATHER
+  - LOGISTIC
+  - REDUCE_MAX
+  - RESHAPE
+  input_dtype: int8
+  output_dtype: int8
+  input_shape:
+  - 1
+  - 51
+  output_shape:
+  - 1
+  - 1
+  input_bytes: 51
+  output_bytes: 1
+metrics:
+  execution_time: 3.1428111869999924
+  tflm_compatible: true
+  operators_detected: 8
+  unsupported_operators: 0
+  n_calibration_samples: 22346
+  single_input_output_int8: true
+  single_input_output_integer: true
