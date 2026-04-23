@@ -966,6 +966,7 @@ register5: check-variant-format
 			MLFLOW_URI="$$($(PYTHON) -c 'import pathlib,yaml; p=pathlib.Path(".mlops4ofp/setup.yaml"); cfg=yaml.safe_load(p.read_text()); print(cfg.get("mlflow",{}).get("tracking_uri",""))')"; \
 			MLFLOW_URI="$$MLFLOW_URI" VARIANT="$$VARIANT_NORM" PHASE5="$(PHASE5)" $(PYTHON) -m scripts.core.mlflow_register; \
 		fi; \
+	fi; \
 	$(MAKE) register-generic \
 		PHASE=$(PHASE5) \
 		VARIANTS_DIR=$(VARIANTS_DIR5) \
@@ -978,7 +979,7 @@ register5: check-variant-format
 
 remove5: check-variant-format
 	@echo "==> Removing MLflow run for $(PHASE5):$(VARIANT) if present"
-	@MLFLOW_ENABLED=$$($(PYTHON) -c 'import pathlib,yaml; p=pathlib.Path(".mlops4ofp/setup.yaml"); cfg=(yaml.safe_load(p.read_text()) if p.exists() else {}); print("1" if isinstance(cfg,dict) and cfg.get("mlflow",{}).get("enabled",False) else "0")'; \
+	@MLFLOW_ENABLED=$$($(PYTHON) -c 'import pathlib,yaml; p=pathlib.Path(".mlops4ofp/setup.yaml"); cfg=(yaml.safe_load(p.read_text()) if p.exists() else {}); print("1" if isinstance(cfg,dict) and cfg.get("mlflow",{}).get("enabled",False) else "0")'); \
 	if [ "$$MLFLOW_ENABLED" = "1" ]; then \
 		OUTS="$(VARIANTS_DIR5)/$(VARIANT)/outputs.yaml"; \
 		if [ -f "$$OUTS" ]; then \
