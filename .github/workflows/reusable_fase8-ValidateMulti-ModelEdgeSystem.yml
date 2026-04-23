@@ -12,6 +12,9 @@ on:
       params_json:
         required: true
         type: string
+      checkout_branch:
+        required: true
+        type: string
 
 jobs:
   ejecutar-fase-8:
@@ -28,7 +31,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: test
+          ref: ${{ inputs.checkout_branch }}
 
     # 1️⃣ INYECTAR EL ENTORNO VIRTUAL EN GITHUB ACTIONS
       - name: Activar Entorno Virtual (Añadir al PATH)
