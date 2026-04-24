@@ -1,0 +1,28 @@
+phase: f04_targets
+variant: v4_0402
+artifacts:
+  dataset:
+    path: 04_targets.parquet
+    sha256: 18e0c0a12cee4943645c879e9177b6f96c4fd8afe9d07fc23efc83c4b2e938c8
+  report:
+    path: 04_targets_report.html
+    sha256: dee03f5b207483a3b0c5d409781aa933571e040eea78654f269afdab52749085
+exports:
+  Tu: 10
+  OW: 600
+  LT: 100
+  PW: 100
+  prediction_name: battery_overheat
+  target_operator: OR
+  target_event_types:
+  - Battery_Active_Power_0_10-to-90_100
+  - Battery_Active_Power_10_90-to-90_100
+  event_type_count: 102
+  n_windows: 1150178
+  n_windows_pos: 2346
+  n_windows_neg: 1147832
+metrics:
+  execution_time: 1.843339508000014
+  positive_ratio: 0.0020396842923443154
+provenance:
+  generated_at: '2026-04-24T13:38:40.889861+00:00'
