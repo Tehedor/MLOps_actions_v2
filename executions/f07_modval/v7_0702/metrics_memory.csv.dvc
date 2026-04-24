@@ -1,0 +1,5 @@
+outs:
+- md5: 28f08edee4fc41e75285a6c2ed2f2009
+  size: 402
+  hash: md5
+  path: metrics_memory.csv
