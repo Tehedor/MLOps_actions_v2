@@ -16,10 +16,6 @@ on:
         required: true
         type: string
 
-permissions:
-  contents: write
-  pull-requests: write
-
 jobs:
   ejecutar-fase-8:
     runs-on: [self-hosted, Linux, X64, self-hosted-tehelab]
@@ -27,10 +23,6 @@ jobs:
       USE_VENV: 0
       DAGSHUB_USER: ${{ secrets.DAGSHUB_USER }}
       DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
-      VARIANT_ROOT: executions/f08_multimodel/${{ inputs.variant_id }}
-      REGISTER_EXCLUDE_EXTS: |
-        .csv
-        .json
     defaults:
       run:
         working-directory: ${{ github.workspace }}
@@ -40,8 +32,8 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ inputs.checkout_branch }}
-          token: ${{ secrets.GITHUB_TOKEN }}
 
+    # 1️⃣ INYECTAR EL ENTORNO VIRTUAL EN GITHUB ACTIONS
       - name: Activar Entorno Virtual (Añadir al PATH)
         run: echo "$HOME/.venv/bin" >> $GITHUB_PATH
 
@@ -65,6 +57,8 @@ jobs:
           def normalize_parents(value: str) -> list[str]:
             if not value:
               return []
+
+            # JSON list: ["v701", "v702"]
             if value.startswith("["):
               try:
                 parsed = json.loads(value)
@@ -72,6 +66,8 @@ jobs:
                   return [str(x).strip() for x in parsed if str(x).strip()]
               except Exception:
                 pass
+
+            # CSV or single value: v701,v702 or v701
             return [item.strip() for item in value.split(",") if item.strip()]
 
           parents = normalize_parents(raw)
@@ -79,14 +75,11 @@ jobs:
             print("[WARN] parents_variant vacío; no se ejecuta DVC pull")
 
           for parent in parents:
-            cmd = ["dvc", "pull", f"executions/f07_modval/{parent}/*.dvc"]
+            cmd = ["dvc", "pull", f"executions/f07_validate/{parent}/*.dvc"]
             print("[INFO] Ejecutando:", " ".join(cmd))
             subprocess.run(cmd, check=False)
           PY
 
-      # =========================================================
-      # STEP 1: variant8
-      # =========================================================
       - name: Crear variante Fase 8
         run: |
           python - <<'PY'
@@ -95,6 +88,7 @@ jobs:
           import sys
 
           def to_make_value(value):
+              """Convierte valores Python a argumentos seguros para make."""
               if isinstance(value, bool):
                   return "true" if value else "false"
               if isinstance(value, (list, dict)):
@@ -109,6 +103,7 @@ jobs:
           def normalize_parents(value: str) -> list[str]:
               if not value:
                   return []
+
               if value.startswith("["):
                   try:
                       parsed = json.loads(value)
@@ -116,14 +111,17 @@ jobs:
                           return [str(x).strip() for x in parsed if str(x).strip()]
                   except Exception:
                       pass
+
               return [item.strip() for item in value.split(",") if item.strip()]
 
           parents_list = normalize_parents(raw_parents)
           if not parents_list:
               raise RuntimeError("parents_variant vacío o inválido")
 
+          # Forzar formato lista para schema f08 (parents: type=list)
           parents_make_value = json.dumps(parents_list, ensure_ascii=False)
 
+          # Fallback por doble-serialización (si params llegó como string)
           if isinstance(params, str):
               try:
                   params = json.loads(params)
@@ -155,122 +153,17 @@ jobs:
           )
           PY
 
-      - name: PR — publicar variant
-        id: pr-variant
-        uses: ./.github/actions/commit-and-pr
-        with:
-          variant_id: ${{ inputs.variant_id }}
-          phase_id: f8
-          step: variant
-          paths: |
-            ${{ env.VARIANT_ROOT }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Merge PR de variant
-        if: ${{ steps.pr-variant.outputs.PR_NUMBER != '' }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          PR="${{ steps.pr-variant.outputs.PR_NUMBER }}"
-          for i in 1 2 3 4 5; do
-            if gh pr merge "$PR" --squash --delete-branch; then break; fi
-            echo "[WARN] merge falló intento $i, reintento en $((i*3))s..."
-            sleep $((i * 3))
-            [[ $i -eq 5 ]] && { echo "[ERROR] Merge falló tras 5 intentos" >&2; exit 1; }
-          done
-
-      # =========================================================
-      # STEP 2: script8
-      # =========================================================
       - name: Ejecutar script de Fase 8
         env:
           PYTHONFAULTHANDLER: 1
-        run: make script8 VARIANT=${{ inputs.variant_id }}
-
-      - name: PR — publicar script
-        id: pr-script
-        uses: ./.github/actions/commit-and-pr
-        with:
-          variant_id: ${{ inputs.variant_id }}
-          phase_id: f8
-          step: script
-          paths: |
-            ${{ env.VARIANT_ROOT }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Merge PR de script
-        if: ${{ steps.pr-script.outputs.PR_NUMBER != '' }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          PR="${{ steps.pr-script.outputs.PR_NUMBER }}"
-          for i in 1 2 3 4 5; do
-            if gh pr merge "$PR" --squash --delete-branch; then break; fi
-            echo "[WARN] merge falló intento $i, reintento en $((i*3))s..."
-            sleep $((i * 3))
-            [[ $i -eq 5 ]] && { echo "[ERROR] Merge falló tras 5 intentos" >&2; exit 1; }
-          done
+          make script8 VARIANT=${{ inputs.variant_id }}
 
-      # =========================================================
-      # STEP 3: check8
-      # =========================================================
       - name: Verificar resultados
-        run: make check8 VARIANT=${{ inputs.variant_id }}
-
-      - name: PR — publicar check
-        id: pr-check
-        if: always()
-        uses: ./.github/actions/commit-and-pr
-        with:
-          variant_id: ${{ inputs.variant_id }}
-          phase_id: f8
-          step: check
-          paths: |
-            ${{ env.VARIANT_ROOT }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Merge PR de check
-        if: ${{ always() && steps.pr-check.outputs.PR_NUMBER != '' }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          PR="${{ steps.pr-check.outputs.PR_NUMBER }}"
-          for i in 1 2 3 4 5; do
-            if gh pr merge "$PR" --squash --delete-branch; then break; fi
-            echo "[WARN] merge falló intento $i, reintento en $((i*3))s..."
-            sleep $((i * 3))
-            [[ $i -eq 5 ]] && { echo "[ERROR] Merge falló tras 5 intentos" >&2; exit 1; }
-          done
+          make check8 VARIANT=${{ inputs.variant_id }}
 
-      # =========================================================
-      # STEP 4: register8
-      # =========================================================
       - name: Registrar resultados de F8
-        run: make register8 VARIANT=${{ inputs.variant_id }}
-
-      - name: PR — publicar register
-        id: pr-register
-        uses: ./.github/actions/commit-and-pr
-        with:
-          variant_id: ${{ inputs.variant_id }}
-          phase_id: f8
-          step: register
-          paths: |
-            ${{ env.VARIANT_ROOT }}
-            .dvc/config
-            dvc.yaml
-            dvc.lock
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Merge PR de register
-        if: ${{ steps.pr-register.outputs.PR_NUMBER != '' }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          PR="${{ steps.pr-register.outputs.PR_NUMBER }}"
-          for i in 1 2 3 4 5; do
-            if gh pr merge "$PR" --squash --delete-branch; then break; fi
-            echo "[WARN] merge falló intento $i, reintento en $((i*3))s..."
-            sleep $((i * 3))
-            [[ $i -eq 5 ]] && { echo "[ERROR] Merge falló tras 5 intentos" >&2; exit 1; }
-          done
+          make register8 VARIANT=${{ inputs.variant_id }}
+

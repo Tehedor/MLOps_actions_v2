@@ -12,10 +12,10 @@ on:
       params_json:
         required: true
         type: string
+
       checkout_branch:
         required: true
         type: string
-
 permissions:
   contents: write
   pull-requests: write
@@ -23,15 +23,20 @@ permissions:
 jobs:
   ejecutar-fase-2:
     runs-on: ubuntu-latest
+    # runs-on: [self-hosted, self-hosted-k3s-m1]
     container:
       image: ${{ vars.IMAGE_MLOPS || 'ghcr.io/tehedor/mlops_actions_v2/mlops-env:latest' }}
     env:
       USE_VENV: 0
       DAGSHUB_USER: ${{ secrets.DAGSHUB_USER }}
       DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
+      SKIP_GIT_PUBLISH: "1"
+      SKIP_LINEAGE: "1"   
       VARIANT_ROOT: executions/f02_events/${{ inputs.variant_id }}
       REGISTER_EXCLUDE_EXTS: |
+        .h5
         .parquet
+        .tflite
     defaults:
       run:
         working-directory: ${{ github.workspace }}
@@ -41,7 +46,6 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ inputs.checkout_branch }}
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Configurar Git, sincronizar Fase 1 y configurar DVC
         run: |
@@ -55,10 +59,7 @@ jobs:
       - name: DVC Pull (Traer datos de Fase 1)
         run: dvc pull executions/f01_explore/${{ inputs.parent_variant }}/*.dvc
 
-      # =========================================================
-      # STEP 1: variant2
-      # =========================================================
-      - name: Crear variante Fase 2
+      - name: Ejecutar Fase 2 (Variante, Script, Check, Register)
         run: |
           python - <<'PY'
           import json
@@ -68,6 +69,7 @@ jobs:
           raw = '''${{ inputs.params_json }}'''.strip()
           params = json.loads(raw) if raw else {}
 
+          # Soporta casos donde params_json llegue serializado dos veces.
           if isinstance(params, str):
             try:
               params = json.loads(params)
@@ -82,6 +84,7 @@ jobs:
             if isinstance(value, bool):
               return "true" if value else "false"
             if isinstance(value, (list, dict)):
+              # Compacto y estable para que make reciba un único argumento.
               return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
             return str(value)
 
@@ -104,96 +107,17 @@ jobs:
             ],
             check=True,
           )
+          subprocess.run(["make", "script2", "VARIANT=${{ inputs.variant_id }}"], check=True)
+          # subprocess.run(["make", "check2", "VARIANT=${{ inputs.variant_id }}"], check=True)
+          # subprocess.run(["make", "register2", "VARIANT=${{ inputs.variant_id }}"], check=True)
           PY
-
-      - name: PR — publicar variant
-        id: pr-variant
-        uses: ./.github/actions/commit-and-pr
-        with:
-          variant_id: ${{ inputs.variant_id }}
-          phase_id: f2
-          step: variant
-          paths: |
-            ${{ env.VARIANT_ROOT }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Merge PR de variant
-        if: ${{ steps.pr-variant.outputs.PR_NUMBER != '' }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          PR="${{ steps.pr-variant.outputs.PR_NUMBER }}"
-          for i in 1 2 3 4 5; do
-            if gh pr merge "$PR" --squash --delete-branch; then break; fi
-            echo "[WARN] merge falló intento $i, reintento en $((i*3))s..."
-            sleep $((i * 3))
-            [[ $i -eq 5 ]] && { echo "[ERROR] Merge falló tras 5 intentos" >&2; exit 1; }
-          done
-
-      # =========================================================
-      # STEP 2: script2
-      # =========================================================
-      - name: Run Script2
+      
+      - name: Run Script2 
         run: make script2 VARIANT=${{ inputs.variant_id }}
 
-      - name: PR — publicar script
-        id: pr-script
-        uses: ./.github/actions/commit-and-pr
-        with:
-          variant_id: ${{ inputs.variant_id }}
-          phase_id: f2
-          step: script
-          paths: |
-            ${{ env.VARIANT_ROOT }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Merge PR de script
-        if: ${{ steps.pr-script.outputs.PR_NUMBER != '' }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          PR="${{ steps.pr-script.outputs.PR_NUMBER }}"
-          for i in 1 2 3 4 5; do
-            if gh pr merge "$PR" --squash --delete-branch; then break; fi
-            echo "[WARN] merge falló intento $i, reintento en $((i*3))s..."
-            sleep $((i * 3))
-            [[ $i -eq 5 ]] && { echo "[ERROR] Merge falló tras 5 intentos" >&2; exit 1; }
-          done
-
-      # =========================================================
-      # STEP 3: check2
-      # =========================================================
       - name: Run Check2
         run: make check2 VARIANT=${{ inputs.variant_id }}
 
-      - name: PR — publicar check
-        id: pr-check
-        if: always()
-        uses: ./.github/actions/commit-and-pr
-        with:
-          variant_id: ${{ inputs.variant_id }}
-          phase_id: f2
-          step: check
-          paths: |
-            ${{ env.VARIANT_ROOT }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Merge PR de check
-        if: ${{ always() && steps.pr-check.outputs.PR_NUMBER != '' }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          PR="${{ steps.pr-check.outputs.PR_NUMBER }}"
-          for i in 1 2 3 4 5; do
-            if gh pr merge "$PR" --squash --delete-branch; then break; fi
-            echo "[WARN] merge falló intento $i, reintento en $((i*3))s..."
-            sleep $((i * 3))
-            [[ $i -eq 5 ]] && { echo "[ERROR] Merge falló tras 5 intentos" >&2; exit 1; }
-          done
-
-      # =========================================================
-      # STEP 4: register2
-      # =========================================================
       - name: Run Register2
         run: make register2 VARIANT=${{ inputs.variant_id }}
 
@@ -216,10 +140,4 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          PR="${{ steps.pr-register.outputs.PR_NUMBER }}"
-          for i in 1 2 3 4 5; do
-            if gh pr merge "$PR" --squash --delete-branch; then break; fi
-            echo "[WARN] merge falló intento $i, reintento en $((i*3))s..."
-            sleep $((i * 3))
-            [[ $i -eq 5 ]] && { echo "[ERROR] Merge falló tras 5 intentos" >&2; exit 1; }
-          done
+          gh pr merge "${{ steps.pr-register.outputs.PR_NUMBER }}" --squash --delete-branch
