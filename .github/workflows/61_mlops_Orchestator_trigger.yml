@@ -88,10 +88,10 @@ jobs:
           FASE_04 = fases_allowed_list[3]
           FASE_08 = fases_allowed_list[7]
 
-            def infer_phase_number(fase: str) -> int:
+          def infer_phase_number(fase: str) -> int:
               m = re.match(r'^f?(\d{2})_', fase)
               if not m:
-                raise ValueError(f"Cannot infer phase number from fase={fase!r}")
+                  raise ValueError(f"Cannot infer phase number from fase={fase!r}")
               return int(m.group(1))
 
           def normalize_variant(fase: str, variant: str) -> str:
@@ -176,7 +176,7 @@ jobs:
           if payload.get("parent_variant"):
               parent_variant = normalize_variant_for_fase(
                   # parent belongs to the previous fase
-                f"f{infer_phase_number(fase)-1:02d}_prev",
+                  f"f{infer_phase_number(fase)-1:02d}_prev",
                   payload["parent_variant"],
                   "parent_variant",
               )
