@@ -12,8 +12,8 @@ jobs:
   validar-payload:
     runs-on: ubuntu-latest
     env:
-      FASES_ALLOWED: "f01_explore,f02_prepareeventsds,f03_preparewindowsds,f04_targetengineering,f05_modeling,f06_packaging,f07_deployrun,f08_multimodelsystem"
-      FASES_REQUIRING_PARENT: "f02_prepareeventsds,f03_preparewindowsds,f04_targetengineering,f05_modeling,f06_packaging,f07_deployrun" 
+      FASES_ALLOWED: "f01_explore,f02_events,f03_windows,f04_targets,f05_modeling,f06_quant,f07_modval,f08_sysval"
+      FASES_REQUIRING_PARENT: "f02_events,f03_windows,f04_targets,f05_modeling,f06_quant,f07_modval"
     outputs:
       fase:           ${{ steps.validar.outputs.fase }}
       fase_01:        ${{ steps.validar.outputs.fase_01 }}
