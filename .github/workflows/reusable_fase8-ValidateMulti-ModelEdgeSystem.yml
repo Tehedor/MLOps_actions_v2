@@ -15,6 +15,10 @@ on:
       checkout_branch:
         required: true
         type: string
+      runner:
+        required: false
+        type: string
+        default: '["self-hosted", "Linux", "X64", "self-hosted-tehelab"]'
 
 permissions:
   contents: write
@@ -22,7 +26,7 @@ permissions:
 
 jobs:
   ejecutar-fase-8:
-    runs-on: [self-hosted, Linux, X64, self-hosted-tehelab]
+    runs-on: ${{ fromJSON(inputs.runner) }}
     env:
       USE_VENV: 0
       DAGSHUB_USER: ${{ secrets.DAGSHUB_USER }}

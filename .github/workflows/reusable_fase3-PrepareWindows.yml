@@ -15,6 +15,10 @@ on:
       checkout_branch:
         required: true
         type: string
+      runner:
+        required: false
+        type: string
+        default: '"ubuntu-latest"'
 
 permissions:
   contents: write
@@ -22,7 +26,7 @@ permissions:
 
 jobs:
   ejecutar-fase-3:
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(inputs.runner) }}
     container:
       image: ${{ vars.IMAGE_MLOPS || 'ghcr.io/tehedor/mlops_actions_v2/mlops-env:latest' }}
     env:

@@ -1,9 +1,12 @@
-name: "1️⃣♻️ Reusable: Fase 1 (Explore)"
+name: "5️⃣♻️ Reusable: Fase 5 (Modeling)"
 
 on:
   workflow_call:
     inputs:
       variant_id:
+        required: true
+        type: string
+      parent_variant:
         required: true
         type: string
       params_json:
@@ -12,28 +15,25 @@ on:
       checkout_branch:
         required: true
         type: string
-      runner:
-        required: false
-        type: string
-        default: '"ubuntu-latest"'
 
 permissions:
   contents: write
   pull-requests: write
 
 jobs:
-  ejecutar-fase-1:
-    runs-on: ${{ fromJSON(inputs.runner) }}
+  ejecutar-fase-5:
+    runs-on: ubuntu-latest
     container:
       image: ${{ vars.IMAGE_MLOPS || 'ghcr.io/tehedor/mlops_actions_v2/mlops-env:latest' }}
     env:
       USE_VENV: 0
       DAGSHUB_USER: ${{ secrets.DAGSHUB_USER }}
       DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
-      SKIP_GIT_PUBLISH: "1"
-      SKIP_LINEAGE: "1"
-      VARIANT_ROOT: executions/f01_explore/${{ inputs.variant_id }}
+      MLFLOW_TRACKING_USERNAME: ${{ secrets.DAGSHUB_USER }}
+      MLFLOW_TRACKING_PASSWORD: ${{ secrets.DAGSHUB_TOKEN }}
+      VARIANT_ROOT: executions/f05_modeling/${{ inputs.variant_id }}
       REGISTER_EXCLUDE_EXTS: |
+        .h5
         .parquet
     defaults:
       run:
@@ -46,7 +46,7 @@ jobs:
           ref: ${{ inputs.checkout_branch }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Configurar Git y DVC
+      - name: Configurar Git, sincronizar Fase 4 y configurar DVC
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
@@ -55,22 +55,56 @@ jobs:
           dvc remote modify storage --local user "$DAGSHUB_USER"
           dvc remote modify storage --local password "$DAGSHUB_TOKEN"
 
-      - name: DVC Pull (Datos Raw)
-        run: dvc pull data/raw.csv.dvc
+      - name: DVC Pull (Traer datos de Fase 4)
+        run: dvc pull executions/f04_targets/${{ inputs.parent_variant }}/*.dvc
 
       # =========================================================
-      # STEP 1: variant1 → crea params.yaml + metadata.yaml
+      # STEP 1: variant5
       # =========================================================
-      - name: Ejecutar make variant1
+      - name: Ejecutar Fase 5 (Variante)
         run: |
           python - <<'PY'
-          import json, subprocess
+          import json
+          import subprocess
+          import sys
+
+          def to_make_value(value):
+              if isinstance(value, bool):
+                  return "true" if value else "false"
+              if isinstance(value, (list, dict)):
+                  return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+              return str(value)
+
           raw = '''${{ inputs.params_json }}'''.strip()
           params = json.loads(raw) if raw else {}
-          extra_args = [f"{str(k).strip()}={v}" for k, v in params.items() if str(k).strip()]
+
+          if isinstance(params, str):
+              try:
+                  params = json.loads(params)
+              except Exception:
+                  pass
+
+          if not isinstance(params, dict):
+              print(f"[WARN] params no es dict, asumiendo dict vacío. Type={type(params)}")
+              params = {}
+
+          extra_args = []
+          for key, value in params.items():
+              k = str(key).strip()
+              if not k:
+                  continue
+              extra_args.append(f"{k}={to_make_value(value)}")
+
           print("Ejecutando con:", " ".join(extra_args))
+
           subprocess.run(
-              ["make", "variant1", "VARIANT=${{ inputs.variant_id }}", *extra_args],
+              [
+                  "make",
+                  "variant5",
+                  "VARIANT=${{ inputs.variant_id }}",
+                  "PARENT=${{ inputs.parent_variant }}",
+                  *extra_args,
+              ],
               check=True,
           )
           PY
@@ -80,7 +114,7 @@ jobs:
         uses: ./.github/actions/commit-and-pr
         with:
           variant_id: ${{ inputs.variant_id }}
-          phase_id: f1
+          phase_id: f5
           step: variant
           paths: |
             ${{ env.VARIANT_ROOT }}
@@ -100,17 +134,19 @@ jobs:
           done
 
       # =========================================================
-      # STEP 2: script1 → ejecuta y genera outputs
+      # STEP 2: script5
       # =========================================================
-      - name: Run Script1
-        run: make script1 VARIANT=${{ inputs.variant_id }}
+      - name: Ejecutar script de Fase 5
+        env:
+          PYTHONFAULTHANDLER: 1
+        run: make script5-a VARIANT=${{ inputs.variant_id }}
 
       - name: PR — publicar script
         id: pr-script
         uses: ./.github/actions/commit-and-pr
         with:
           variant_id: ${{ inputs.variant_id }}
-          phase_id: f1
+          phase_id: f5
           step: script
           paths: |
             ${{ env.VARIANT_ROOT }}
@@ -130,10 +166,10 @@ jobs:
           done
 
       # =========================================================
-      # STEP 3: check1 → verifica y actualiza metadata.yaml
+      # STEP 3: check5
       # =========================================================
-      - name: Run Check1
-        run: make check1 VARIANT=${{ inputs.variant_id }}
+      - name: Verificar resultados
+        run: make check5 VARIANT=${{ inputs.variant_id }}
 
       - name: PR — publicar check
         id: pr-check
@@ -141,7 +177,7 @@ jobs:
         uses: ./.github/actions/commit-and-pr
         with:
           variant_id: ${{ inputs.variant_id }}
-          phase_id: f1
+          phase_id: f5
           step: check
           paths: |
             ${{ env.VARIANT_ROOT }}
@@ -161,17 +197,17 @@ jobs:
           done
 
       # =========================================================
-      # STEP 4: register1 → DVC add + DVC push + metadata.yaml
+      # STEP 4: register5
       # =========================================================
-      - name: Run Register1
-        run: make register1 VARIANT=${{ inputs.variant_id }}
+      - name: Registrar resultados de F5
+        run: make register5 VARIANT=${{ inputs.variant_id }}
 
       - name: PR — publicar register
         id: pr-register
         uses: ./.github/actions/commit-and-pr
         with:
           variant_id: ${{ inputs.variant_id }}
-          phase_id: f1
+          phase_id: f5
           step: register
           paths: |
             ${{ env.VARIANT_ROOT }}
