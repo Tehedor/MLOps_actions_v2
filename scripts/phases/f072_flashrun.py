@@ -508,7 +508,7 @@ def auto_detect_port():
             return True
 
         # Prioridad 2: texto que indica puerto serie/UART, pero excluye explícitamente virtuales macOS
-        hints = ("usb", "uart", "cp210", "ch340", "wch", "silicon", "ftdi", "ttyusb", "ttyacm")
+        hints = ("usb", "uart", "cp210", "ch340", "wch", "silicon", "ftdi", "ttyusb", "ttyacm","ttyvusb")
         by_text = any(h in dev or h in desc or h in manu for h in hints)
 
         # Excluye explícitamente puertos virtuales comunes en macOS
