@@ -526,6 +526,20 @@ def auto_detect_port():
     if len(usb_ports) == 1:
         return usb_ports[0]
 
+    # Fallback: some environments create a symlink like /dev/ttyVUSB0 -> /dev/pts/N
+    # which pyserial.list_ports may not enumerate. Check for those explicitly.
+    try:
+        import glob
+
+        vusb = sorted(glob.glob("/dev/ttyVUSB*"))
+        if vusb:
+            if len(vusb) == 1:
+                return vusb[0]
+            return "MULTIPLE"
+    except Exception:
+        # non-fatal; fall back to generic MULTIPLE
+        pass
+
     return "MULTIPLE"
 
 
